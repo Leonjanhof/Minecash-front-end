@@ -5,3 +5,6 @@
 /.react-router/
 /build/
 
+# Cursor IDE
+.cursor/
+
