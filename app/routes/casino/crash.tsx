@@ -346,29 +346,7 @@ export default function Crash() {
                 console.log('current bet amount after update:', message.state.current_user_bet?.amount || 0);
               }
               break;
-            case 'crash_state_update':
-              console.log('crash state update:', message.state);
-              setCrashState(message.state);
-              
-              // Handle bet state updates more robustly
-              if (message.state.current_user_bet && message.state.current_user_bet.amount) {
-                console.log('setting current bet amount to:', message.state.current_user_bet.amount);
-                setCurrentBetAmount(message.state.current_user_bet.amount);
-              } else if (message.state.phase === 'crashed' || message.state.phase === 'waiting') {
-                // Reset bet when game ends or new round starts
-                console.log('resetting bet amount - game ended or new round');
-                setCurrentBetAmount(0);
-              }
-              
-              // Update last rounds if provided
-              if (message.state.last_rounds) {
-                console.log('updating last rounds from websocket:', message.state.last_rounds);
-                setLastRounds(message.state.last_rounds); // Data is already limited to 20
-              }
-              
-              // Additional logging for debugging
-              console.log('current bet amount after update:', message.state.current_user_bet?.amount || 0);
-              break;
+
           }
         },
         onError: (error) => {
