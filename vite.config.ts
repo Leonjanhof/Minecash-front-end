@@ -5,4 +5,6 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+  // Remove proxy configuration as it won't work in production
+  // API calls should be made directly to your backend URL
 });

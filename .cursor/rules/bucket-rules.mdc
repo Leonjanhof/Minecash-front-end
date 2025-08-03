@@ -1,0 +1,812 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Create a bucket
+Creates a new Storage bucket
+
+RLS policy permissions required:
+buckets table permissions: insert
+objects table permissions: none
+Refer to the Storage guide on how access control works
+Parameters
+id
+Required
+string
+A unique identifier for the bucket you are creating.
+
+options
+Required
+object
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Create bucket
+const { data, error } = await supabase
+  .storage
+  .createBucket('avatars', {
+    public: false,
+    allowedMimeTypes: ['image/png'],
+    fileSizeLimit: 1024
+  })
+Response
+Retrieve a bucket
+Retrieves the details of an existing Storage bucket.
+
+RLS policy permissions required:
+buckets table permissions: select
+objects table permissions: none
+Refer to the Storage guide on how access control works
+Parameters
+id
+Required
+string
+The unique identifier of the bucket you would like to retrieve.
+
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Get bucket
+const { data, error } = await supabase
+  .storage
+  .getBucket('avatars')
+Response
+List all buckets
+Retrieves the details of all Storage buckets within an existing project.
+
+RLS policy permissions required:
+buckets table permissions: select
+objects table permissions: none
+Refer to the Storage guide on how access control works
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+List buckets
+const { data, error } = await supabase
+  .storage
+  .listBuckets()
+Response
+Update a bucket
+Updates a Storage bucket
+
+RLS policy permissions required:
+buckets table permissions: select and update
+objects table permissions: none
+Refer to the Storage guide on how access control works
+Parameters
+id
+Required
+string
+A unique identifier for the bucket you are updating.
+
+options
+Required
+object
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Update bucket
+const { data, error } = await supabase
+  .storage
+  .updateBucket('avatars', {
+    public: false,
+    allowedMimeTypes: ['image/png'],
+    fileSizeLimit: 1024
+  })
+Response
+Delete a bucket
+Deletes an existing bucket. A bucket can't be deleted with existing objects inside it. You must first empty() the bucket.
+
+RLS policy permissions required:
+buckets table permissions: select and delete
+objects table permissions: none
+Refer to the Storage guide on how access control works
+Parameters
+id
+Required
+string
+The unique identifier of the bucket you would like to delete.
+
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Delete bucket
+const { data, error } = await supabase
+  .storage
+  .deleteBucket('avatars')
+Response
+Empty a bucket
+Removes all objects inside a single bucket.
+
+RLS policy permissions required:
+buckets table permissions: select
+objects table permissions: select and delete
+Refer to the Storage guide on how access control works
+Parameters
+id
+Required
+string
+The unique identifier of the bucket you would like to empty.
+
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Empty bucket
+const { data, error } = await supabase
+  .storage
+  .emptyBucket('avatars')
+Response
+Upload a file
+Uploads a file to an existing bucket.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: only insert when you are uploading new files and select, insert and update when you are upserting files
+Refer to the Storage guide on how access control works
+For React Native, using either Blob, File or FormData does not work as intended. Upload file using ArrayBuffer from base64 file data instead, see example below.
+Parameters
+path
+Required
+string
+The file path, including the file name. Should be of the format folder/subfolder/filename.png. The bucket must already exist before attempting to upload.
+
+fileBody
+Required
+FileBody
+The body of the file to be stored in the bucket.
+
+fileOptions
+Optional
+FileOptions
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Upload file
+Upload file using `ArrayBuffer` from base64 file data
+const avatarFile = event.target.files[0]
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .upload('public/avatar1.png', avatarFile, {
+    cacheControl: '3600',
+    upsert: false
+  })
+Response
+Download a file
+Downloads a file from a private bucket. For public buckets, make a request to the URL returned from getPublicUrl instead.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: select
+Refer to the Storage guide on how access control works
+Parameters
+path
+Required
+string
+The full path and file name of the file to be downloaded. For example folder/image.png.
+
+options
+Optional
+object
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Download file
+Download file with transformations
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .download('folder/avatar1.png')
+Response
+List all files in a bucket
+Lists all the files within a bucket.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: select
+Refer to the Storage guide on how access control works
+Parameters
+path
+Optional
+string
+The folder path.
+
+options
+Optional
+SearchOptions
+Details
+parameters
+Optional
+FetchParameters
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+List files in a bucket
+Search files in a bucket
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .list('folder', {
+    limit: 100,
+    offset: 0,
+    sortBy: { column: 'name', order: 'asc' },
+  })
+Response
+Replace an existing file
+Replaces an existing file at the specified path with a new one.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: update and select
+Refer to the Storage guide on how access control works
+For React Native, using either Blob, File or FormData does not work as intended. Update file using ArrayBuffer from base64 file data instead, see example below.
+Parameters
+path
+Required
+string
+The relative file path. Should be of the format folder/subfolder/filename.png. The bucket must already exist before attempting to update.
+
+fileBody
+Required
+One of the following options
+The body of the file to be stored in the bucket.
+
+Details
+Option 1
+string
+Option 2
+ArrayBuffer
+Option 3
+ArrayBufferView
+Option 4
+Blob
+Option 5
+@types/node.Buffer
+Option 6
+File
+Option 7
+FormData
+Option 8
+@types/node.NodeJS.ReadableStream
+Option 9
+ReadableStream
+Option 10
+URLSearchParams
+fileOptions
+Optional
+FileOptions
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Update file
+Update file using `ArrayBuffer` from base64 file data
+const avatarFile = event.target.files[0]
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .update('public/avatar1.png', avatarFile, {
+    cacheControl: '3600',
+    upsert: true
+  })
+Response
+Move an existing file
+Moves an existing file to a new path in the same bucket.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: update and select
+Refer to the Storage guide on how access control works
+Parameters
+fromPath
+Required
+string
+The original file path, including the current file name. For example folder/image.png.
+
+toPath
+Required
+string
+The new file path, including the new file name. For example folder/image-new.png.
+
+options
+Optional
+DestinationOptions
+The destination options.
+
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Move file
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .move('public/avatar1.png', 'private/avatar2.png')
+Response
+Copy an existing file
+Copies an existing file to a new path in the same bucket.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: insert and select
+Refer to the Storage guide on how access control works
+Parameters
+fromPath
+Required
+string
+The original file path, including the current file name. For example folder/image.png.
+
+toPath
+Required
+string
+The new file path, including the new file name. For example folder/image-copy.png.
+
+options
+Optional
+DestinationOptions
+The destination options.
+
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Copy file
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .copy('public/avatar1.png', 'private/avatar2.png')
+Response
+Delete files in a bucket
+Deletes files within the same bucket
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: delete and select
+Refer to the Storage guide on how access control works
+Parameters
+paths
+Required
+Array<string>
+An array of files to delete, including the path and file name. For example ['folder/image.png'].
+
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Delete file
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .remove(['folder/avatar1.png'])
+Response
+Create a signed URL
+Creates a signed URL. Use a signed URL to share a file for a fixed amount of time.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: select
+Refer to the Storage guide on how access control works
+Parameters
+path
+Required
+string
+The file path, including the current file name. For example folder/image.png.
+
+expiresIn
+Required
+number
+The number of seconds until the signed URL expires. For example, 60 for a URL which is valid for one minute.
+
+options
+Optional
+object
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Create Signed URL
+Create a signed URL for an asset with transformations
+Create a signed URL which triggers the download of the asset
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUrl('folder/avatar1.png', 60)
+Response
+Create signed URLs
+Creates multiple signed URLs. Use a signed URL to share a file for a fixed amount of time.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: select
+Refer to the Storage guide on how access control works
+Parameters
+paths
+Required
+Array<string>
+The file paths to be downloaded, including the current file names. For example ['folder/image.png', 'folder2/image2.png'].
+
+expiresIn
+Required
+number
+The number of seconds until the signed URLs expire. For example, 60 for URLs which are valid for one minute.
+
+options
+Optional
+object
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Create Signed URLs
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUrls(['folder/avatar1.png', 'folder/avatar2.png'], 60)
+Response
+Create signed upload URL
+Creates a signed upload URL. Signed upload URLs can be used to upload files to the bucket without further authentication. They are valid for 2 hours.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: insert
+Refer to the Storage guide on how access control works
+Parameters
+path
+Required
+string
+The file path, including the current file name. For example folder/image.png.
+
+options
+Optional
+object
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Create Signed Upload URL
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .createSignedUploadUrl('folder/cat.jpg')
+Response
+Upload to a signed URL
+Upload a file with a token generated from createSignedUploadUrl.
+
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: none
+Refer to the Storage guide on how access control works
+Parameters
+path
+Required
+string
+The file path, including the file name. Should be of the format folder/subfolder/filename.png. The bucket must already exist before attempting to upload.
+
+token
+Required
+string
+The token generated from createSignedUploadUrl
+
+fileBody
+Required
+FileBody
+The body of the file to be stored in the bucket.
+
+fileOptions
+Optional
+FileOptions
+Details
+Return Type
+Promise<One of the following options>
+Details
+Option 1
+object
+Details
+Option 2
+object
+Details
+Upload to a signed URL
+const { data, error } = await supabase
+  .storage
+  .from('avatars')
+  .uploadToSignedUrl('folder/cat.jpg', 'token-from-createSignedUploadUrl', file)
+Response
+Retrieve public URL
+A simple convenience function to get the URL for an asset in a public bucket. If you do not want to use this function, you can construct the public URL by concatenating the bucket URL with the path to the asset. This function does not verify if the bucket is public. If a public URL is created for a bucket which is not public, you will not be able to download the asset.
+
+The bucket needs to be set to public, either via updateBucket() or by going to Storage on supabase.com/dashboard, clicking the overflow menu on a bucket and choosing "Make public"
+RLS policy permissions required:
+buckets table permissions: none
+objects table permissions: none
+Refer to the Storage guide on how access control works
+Parameters
+path
+Required
+string
+The path and name of the file to generate the public URL for. For example folder/image.png.
+
+options
+Optional
+object
+Details
+Return Type
+object
+Details
+Returns the URL for an asset in a public bucket
+Returns the URL for an asset in a public bucket with transformations
+Returns the URL which triggers the download of an asset in a public bucket
+const { data } = supabase
+  .storage
+  .from('public-bucket')
+  .getPublicUrl('folder/avatar1.png')
+Response
+Release Notes
+Supabase.js v2 release notes.
+
+Install the latest version of @supabase/supabase-js
+
+npm install @supabase/supabase-js
+Explicit constructor options#
+All client specific options within the constructor are keyed to the library.
+
+See PR:
+
+const supabase = createClient(apiURL, apiKey, {
+    db: {
+      schema: 'public',
+    },
+    auth: {
+      storage: AsyncStorage,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+    },
+    realtime: {
+      channels,
+      endpoint,
+    },
+    global: {
+      fetch: customFetch,
+      headers: DEFAULT_HEADERS,
+    },
+  })
+TypeScript support#
+The libraries now support typescript.
+
+// previously definitions were injected in the `from()` method
+  supabase.from<Definitions['Message']>('messages').select('\*')
+import type { Database } from './DatabaseDefinitions'
+  // definitions are injected in `createClient()`
+  const supabase = createClient<Database>(SUPABASE_URL, ANON_KEY)
+  const { data } = await supabase.from('messages').select().match({ id: 1 })
+Types can be generated via the CLI:
+
+supabase start
+supabase gen types typescript --local > DatabaseDefinitions.ts
+Data operations return minimal#
+.insert() / .upsert() / .update() / .delete() don't return rows by default: PR.
+
+Previously, these methods return inserted/updated/deleted rows by default (which caused some confusion), and you can opt to not return it by specifying returning: 'minimal'. Now the default behavior is to not return rows. To return inserted/updated/deleted rows, add a .select() call at the end, e.g.:
+
+const { data, error } = await supabase
+    .from('my_table')
+    .delete()
+    .eq('id', 1)
+    .select()
+New ordering defaults#
+.order() now defaults to Postgres’s default: PR.
+
+Previously nullsFirst defaults to false , meaning nulls are ordered last. This is bad for performance if e.g. the column uses an index with NULLS FIRST (which is the default direction for indexes).
+
+Cookies and localstorage namespace#
+Storage key name in the Auth library has changed to include project reference which means that existing websites that had their JWT expiry set to a longer time could find their users logged out with this upgrade.
+
+const defaultStorageKey = `sb-${new URL(this.authUrl).hostname.split('.')[0]}-auth-token`
+New Auth Types#
+Typescript typings have been reworked. Session interface now guarantees that it will always have an access_token, refresh_token and user
+
+interface Session {
+  provider_token?: string | null
+  access_token: string
+  expires_in?: number
+  expires_at?: number
+  refresh_token: string
+  token_type: string
+  user: User
+}
+New Auth methods#
+We're removing the signIn() method in favor of more explicit function signatures:
+signInWithPassword(), signInWithOtp(), and signInWithOAuth().
+
+const { data } = await supabase.auth.signIn({
+    email: 'hello@example',
+    password: 'pass',
+  })
+const { data } = await supabase.auth.signInWithPassword({
+    email: 'hello@example',
+    password: 'pass',
+  })
+New Realtime methods#
+There is a new channel() method in the Realtime library, which will be used for our Multiplayer updates.
+
+We will deprecate the .from().on().subscribe() method previously used for listening to postgres changes.
+
+supabase
+  .channel('any_string_you_want')
+  .on('presence', { event: 'track' }, (payload) => {
+    console.log(payload)
+  })
+  .subscribe()
+supabase
+  .channel('any_string_you_want')
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'movies',
+    },
+    (payload) => {
+      console.log(payload)
+    }
+  )
+  .subscribe()
+Deprecated setAuth()#
+Deprecated and removed setAuth() . To set a custom access_token jwt instead, pass the custom header into the createClient() method provided: (PR)
+
+All changes#
+supabase-js
+shouldThrowOnError has been removed until all the client libraries support this option (PR).
+postgrest-js
+TypeScript typings have been reworked PR
+Use undefined instead of null for function params, types, etc. (https://github.com/supabase/postgrest-js/pull/278)
+Some features are now obsolete: (https://github.com/supabase/postgrest-js/pull/275)
+filter shorthands (e.g. cs vs. contains)
+body in response (vs. data)
+upserting through the .insert() method
+auth method on PostgrestClient
+client-level throwOnError
+gotrue-js
+supabase-js client allows passing a storageKey param which will allow the user to set the key used in local storage for storing the session. By default, this will be namespace-d with the supabase project ref. (PR)
+signIn method is now split into signInWithPassword , signInWithOtp , signInWithOAuth (PR)
+Deprecated and removed session() , user() in favour of using getSession() instead. getSession() will always return a valid session if a user is already logged in, meaning no more random logouts. (PR)
+Deprecated and removed setting for multitab support because getSession() and gotrue’s reuse interval setting takes care of session management across multiple tabs (PR)
+No more throwing of random errors, gotrue-js v2 always returns a custom error type: (PR)
+AuthSessionMissingError
+Indicates that a session is expected but missing
+AuthNoCookieError
+Indicates that a cookie is expected but missing
+AuthInvalidCredentialsError
+Indicates that the incorrect credentials were passed
+Renamed the api namespace to admin , the admin namespace will only contain methods that should only be used in a trusted server-side environment with the service role key
+Moved resetPasswordForEmail , getUser and updateUser to the GoTrueClient which means they will be accessible from the supabase.auth namespace in supabase-js instead of having to do supabase.auth.api to access them
+Removed sendMobileOTP , sendMagicLinkEmail in favor of signInWithOtp
+Removed signInWithEmail, signInWithPhone in favor of signInWithPassword
+Removed signUpWithEmail , signUpWithPhone in favor of signUp
+Replaced update with updateUser
+storage-js
+Return types are more strict. Functions types used to indicate that the data returned could be null even if there was no error. We now make use of union types which only mark the data as null if there is an error and vice versa. (PR)
+The upload and update function returns the path of the object uploaded as the path parameter. Previously the returned value had the bucket name prepended to the path which made it harder to pass the value on to other storage-js methods since all methods take the bucket name and path separately. We also chose to call the returned value path instead of Key (PR)
+getPublicURL only returns the public URL inside the data object. This keeps it consistent with our other methods of returning only within the data object. No error is returned since this method cannot does not throw an error (PR)
+signed urls are returned as signedUrl instead of signedURL in both createSignedUrl and createSignedUrls (PR)
+Encodes URLs returned by createSignedUrl, createSignedUrls and getPublicUrl (PR)
+createsignedUrl used to return a url directly and and within the data object. This was inconsistent. Now we always return values only inside the data object across all methods. (PR)
+createBucket returns a data object instead of the name of the bucket directly. (PR)
+Fixed types for metadata (PR)
+Better error types make it easier to track down what went wrong quicker.
+SupabaseStorageClient is no longer exported. Use StorageClient instead. (PR).
+realtime-js
+RealtimeSubscription class no longer exists and replaced by RealtimeChannel.
+RealtimeClient's disconnect method now returns type of void . It used to return type of Promise<{ error: Error | null; data: boolean }.
+Removed removeAllSubscriptions and removeSubscription methods from SupabaseClient class.
+Removed SupabaseRealtimeClient class.
+Removed SupabaseQueryBuilder class.
+Removed SupabaseEventTypes type.
+Thinking about renaming this to something like RealtimePostgresChangeEvents and moving it to realtime-js v2.
+Removed .from(’table’).on(’INSERT’, () ⇒ {}).subscribe() in favor of new Realtime client API.
+functions-js
+supabase-js v1 only threw an error if the fetch call itself threw an error (network errors, etc) and not if the function returned HTTP errors like 400s or 500s. We have changed this behaviour to return an error if your function throws an error.
+We have introduced new error types to distinguish between different kinds of errors. A FunctionsHttpError error is returned if your function throws an error, FunctionsRelayError if the Supabase Relay has an error processing your function and FunctionsFetchError if there is a network error in calling your function.
+The correct content-type headers are automatically attached when sending the request if you don’t pass in a Content-Type header and pass in an argument to your function. We automatically attach the content type for Blob, ArrayBuffer, File, FormData ,String . If it doesn’t match any of these we assume the payload is json , we serialise the payload as JSON and attach the content type as application/json.
+responseType does not need to be explicitly passed in. We parse the response based on the Content-Type response header sent by the function. We support parsing the responses as text, json, blob, form-data and are parsed as text by default.

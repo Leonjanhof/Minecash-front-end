@@ -1,0 +1,166 @@
+---
+description: Building my back end
+globs: 
+alwaysApply: true
+---
+
+# PROJECT OVERVIEW
+
+🏷️ Project Name:
+MineCash
+
+🧩 Project Type:
+A Minecraft-themed online casino web application with Discord login, real-time gaming, user balances in GC (Gold Coins), and full admin and support systems.
+
+🧠 Purpose:
+Create a visually appealing, highly interactive, and community-driven casino platform for Minecraft users where they can gamble with GC, engage with other players in real time, and manage their accounts through a sleek and responsive web interface.
+
+📌 Core Concepts:
+GC: The internal balance system used for all games, deposits, and withdrawals.
+
+Discord Authentication: Users sign in using Discord OAuth2. Discord is used for profile display, ticket handling, and server membership checks.
+
+Casino Games: Blackjack, Roulette, Crash, Slots, Hi-Lo.
+
+Live Chat: Realtime player chat during games.
+
+User Profile: Personal stats, GC management, transaction access, game history.
+
+Support: Interactive FAQ and Discord ticketing.
+
+Admin Dashboard: Staff access to players, balances, statistics, and game settings.
+
+🎨 Visual Style & Branding
+Inspiration: The official MineCash logo (featuring gold, red, and Minecraft pickaxe elements).
+
+Theme: Dark-themed UI with vibrant gold and red accents to reflect luxury and casino energy.
+
+Design Language: Clean, rounded, animated, and game-centric. High contrast with energetic UI elements.
+
+Color Palette:
+
+Primary: #FFD700 (Gold)
+
+Secondary: #2C2C2C (Dark Gray)
+
+Accent: #E63946 (Red)
+
+Background: #0F0F0F (Black)
+
+Text: #FFFFFF (White)
+
+🔧 Feature Summary (MVP)
+1. Authentication
+Discord OAuth2 login
+
+Pulls: Discord ID, Username, Avatar, Email
+
+After login, shows avatar and username in the header
+
+Detects server membership (for tickets)
+
+2. Landing Page
+Transparent header with login/profile dropdown + nav menu
+
+Hero section with animated logo and Get Started button
+
+Interactive cards for all casino gamemodes
+
+Proof-of-fairness section (image gallery)
+
+Infinite horizontal review carousel
+
+Footer with Discord join link, TOS, and navigation
+
+3. User Profile Page
+Shows Discord avatar, username, email
+
+Current GC balance (large and highlighted)
+
+Deposit GC & Withdraw GC buttons:
+
+Triggers ticket popup if in server
+
+Prompt to join server if not
+
+Stats section per gamemode: games played, win/loss, GC earned/lost
+
+Additional Discord join button top-right
+
+Clean layout styled as good as homepage
+
+4. Support Page
+Flexbox of collapsible FAQ entries
+
+Small animated logo
+
+Create Ticket button with same Discord logic as profile page
+
+5. Casino Gamemode Template
+Used by all individual games (Blackjack, Roulette, etc.)
+
+Top right: animated logo
+
+Main viewbox (game rendering panel)
+
+Below: Controls for the game (bet inputs, buttons)
+
+Below that: Live user chat
+
+Header remains globally accessible
+
+6. Admin Dashboard
+Accessible only to admin-flagged users
+
+Five tabs:
+
+User Management: View/ban users, reset balances
+
+Rates/Percentages: Adjust house edge, win logic, multipliers per game
+
+GC Overview: Total GC in circulation, deposits, withdrawals, per-user balance editor
+
+Gamemode Stats: Usage stats, uptime, win/loss ratio (house performance)
+
+Logs & Tools: Track ticket requests, balance changes, and admin activity
+
+🧱 Tech Stack & Infrastructure
+Frontend: React + Tailwind CSS TS
+
+Backend (optional/expandable):
+
+Supabase
+
+Discord API for login & ticket handling
+
+WebSocket for real-time game interaction/chat
+
+Auth: Discord OAuth2
+
+Storage: User data, GC balance, game history, support logs
+
+Admin Roles: Conditional UI rendering and route protection
+
+
+
+
+
+📎 Key Dependencies
+Discord Bot: Handles ticket creation and user checks
+
+Real-Time Engine: Socket.io or similar for live casino interactions
+
+Animated UI Assets: (e.g. spinning roulette, bouncing card flip, glowing buttons)
+
+✅ Success Criteria
+Fully responsive site (desktop/mobile)
+
+Smooth animations and game interactions
+
+Secure Discord login
+
+Discord ticket system is reliable and accurate
+
+Clean admin interface
+
+Attractive and professional UI to build trust and engagement

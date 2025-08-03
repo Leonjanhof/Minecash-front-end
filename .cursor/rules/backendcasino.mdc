@@ -1,0 +1,223 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+MineCash Casino Backend System MVP
+Overview
+This MVP outlines a comprehensive backend system for integrating gameloop templates across all casino gamemodes with real-time functionality, balance management, and live chat integration.
+1. Core Architecture
+1.1 WebSocket Server (websocket-server.js)
+Purpose: Central real-time communication hub
+Features:
+Connection management for all gamemodes
+Room-based architecture (one room per gamemode)
+Authentication via Supabase JWT tokens
+Real-time balance updates
+Live chat broadcasting
+Game state synchronization
+1.2 Game Loop Engine (game-loop-engine.js)
+Purpose: Universal game loop template for all gamemodes
+Features:
+Standardized game state management
+Bet validation and processing
+Win/loss calculation framework
+Balance update integration
+Game result broadcasting
+Session management
+1.3 Database Integration (database-service.js)
+Purpose: Centralized database operations
+Features:
+Balance checking and updating
+Transaction logging
+Game history tracking
+User session management
+Real-time data synchronization
+2. Gamemode Templates
+2.1 Base Game Template (base-game-template.js)
+Purpose: Abstract base class for all gamemodes
+Features:
+Standard game lifecycle (bet → play → result → payout)
+Common validation methods
+Balance integration hooks
+WebSocket event handlers
+Error handling framework
+2.2 Individual Gamemode Templates
+Blackjack Template (blackjack-template.js)
+Roulette Template (roulette-template.js)
+Crash Template (crash-template.js)
+Slots Template (slots-template.js)
+Hi-Lo Template (hi-lo-template.js)
+3. Real-time Communication System
+3.1 WebSocket Event Handlers (websocket-events.js)
+Purpose: Handle all real-time events
+Events:
+join_game: User joins a gamemode
+place_bet: User places a bet
+game_action: User performs game action
+chat_message: Live chat messages
+balance_update: Real-time balance changes
+game_result: Game outcome broadcasting
+3.2 Room Management (room-manager.js)
+Purpose: Manage gamemode-specific rooms
+Features:
+Room creation and destruction
+User session tracking
+Game state isolation
+Chat room management
+Player count tracking
+4. Balance Management System
+4.1 Balance Service (balance-service.js)
+Purpose: Handle all balance operations
+Features:
+Pre-bet balance validation
+Real-time balance updates
+Transaction logging
+Insufficient balance handling
+Balance synchronization across clients
+4.2 Transaction Logger (transaction-logger.js)
+Purpose: Track all financial transactions
+Features:
+Bet placement logging
+Win/loss recording
+Balance change tracking
+Game session history
+Audit trail maintenance
+5. Live Chat System
+5.1 Chat Manager (chat-manager.js)
+Purpose: Handle live chat functionality
+Features:
+Gamemode-specific chat rooms
+User prefix system: [GAMEMODE] (DiscordName)
+Message broadcasting
+Chat history management
+User typing indicators
+Message rate limiting
+5.2 Chat Events (chat-events.js)
+Purpose: Manage chat-specific WebSocket events
+Events:
+send_message: User sends chat message
+typing_start: User starts typing
+typing_stop: User stops typing
+user_join: User joins chat
+user_leave: User leaves chat
+6. Game State Management
+6.1 Game State Manager (game-state-manager.js)
+Purpose: Manage game state across all gamemodes
+Features:
+Game phase tracking (waiting, betting, playing, results)
+Player state management
+Bet state synchronization
+Game timer management
+State persistence
+6.2 Game Session Manager (session-manager.js)
+Purpose: Handle individual game sessions
+Features:
+Session creation and cleanup
+Player session tracking
+Game data persistence
+Session timeout handling
+Reconnection logic
+7. API Integration
+7.1 REST API Endpoints (api-routes.js)
+Purpose: HTTP endpoints for game operations
+Endpoints:
+GET /api/balance: Get user balance
+POST /api/bet: Place a bet
+GET /api/game-state: Get current game state
+GET /api/game-history: Get user game history
+POST /api/chat: Send chat message
+7.2 Supabase Integration (supabase-integration.js)
+Purpose: Database operations and real-time sync
+Features:
+Balance table operations
+Transaction logging
+Real-time subscriptions
+User authentication
+Data synchronization
+8. Frontend Integration Points
+8.1 Viewbox Integration (viewbox-integration.js)
+Purpose: Interface between backend and frontend viewbox
+Features:
+Game state rendering
+Real-time updates
+User interaction handling
+Animation triggers
+Result display
+8.2 WebSocket Client (websocket-client.js)
+Purpose: Frontend WebSocket connection management
+Features:
+Connection establishment
+Event handling
+Reconnection logic
+Error handling
+Message queuing
+9. Security & Validation
+9.1 Security Middleware (security-middleware.js)
+Purpose: Ensure secure game operations
+Features:
+JWT token validation
+Rate limiting
+Input sanitization
+Anti-cheat measures
+Session validation
+9.2 Bet Validation (bet-validator.js)
+Purpose: Validate all betting operations
+Features:
+Minimum/maximum bet limits
+Balance validation
+Bet type validation
+Duplicate bet prevention
+Bet timing validation
+10. Configuration & Environment
+10.1 Game Configuration (game-config.js)
+Purpose: Centralized game settings
+Features:
+Bet limits per gamemode
+House edge settings
+Game timing configurations
+Chat settings
+Balance limits
+10.2 Environment Management (env-manager.js)
+Purpose: Manage environment variables
+Features:
+Database connection settings
+WebSocket server configuration
+API endpoint management
+Security settings
+Development/production modes
+11. File Structure
+12. Implementation Priority
+Phase 1: Core Infrastructure
+WebSocket server setup
+Database integration
+Basic game loop engine
+Balance management system
+Phase 2: Gamemode Templates
+Base game template
+Individual gamemode templates
+Game state management
+Session handling
+Phase 3: Real-time Features
+Live chat system
+Real-time balance updates
+Game state synchronization
+User interaction handling
+Phase 4: Frontend Integration
+Viewbox integration
+WebSocket client
+UI state management
+Animation triggers
+13. Key Features Summary
+Real-time WebSocket communication
+Universal game loop template
+Live chat with gamemode prefixes
+Real-time balance management
+Session-based game state
+Secure bet validation
+Comprehensive transaction logging
+Scalable room architecture
+Cross-gamemode compatibility
+Frontend-ready integration points
+This MVP provides a solid foundation for building a comprehensive casino backend system that can handle multiple gamemodes with real-time functionality, secure balance management, and engaging live chat features.

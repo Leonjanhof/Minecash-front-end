@@ -6,9 +6,13 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import type { ReactNode } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { AuthProvider } from "./contexts/AuthContext";
+import { GCBalanceProvider } from "./contexts/GCBalanceContext";
+import { Header } from "./components/Header";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -21,9 +25,15 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
+  // Favicon links
+  { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
+  { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
+  { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
+  { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+  { rel: "manifest", href: "/site.webmanifest" },
 ];
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -33,7 +43,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <AuthProvider>
+          <GCBalanceProvider>
+            <Header />
+            {children}
+          </GCBalanceProvider>
+        </AuthProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
