@@ -308,7 +308,7 @@ export default function Crash() {
                   updateBalance(newBalance - balance, 'game_win', 'crash', message.result?.gameId || 'crash_round', `Cashout at ${multiplier}x`);
                 }
               } else if (message.action === 'auto_cashout') {
-                addNotification(`Auto cashout enabled at ${message.result.target_multiplier}x!`, 'success');
+                addNotification(`Auto cashout enabled at ${message.result?.targetMultiplier || message.targetMultiplier}x!`, 'success');
                 setAutoCashoutActive(true);
               }
               break;
@@ -415,6 +415,18 @@ export default function Crash() {
                 currentMultiplier: crashPoint,
                 phase: 'crashed'
               }));
+              break;
+            case 'auto_cashout_triggered':
+              console.log('auto cashout triggered:', message);
+              const autoMultiplier = message.cashoutMultiplier || message.multiplier;
+              const autoPayout = message.cashoutAmount || message.payout;
+              addNotification(`Auto cashout at ${autoMultiplier}x for ${autoPayout} GC!`, 'success');
+              // Reset bet amount after successful auto-cashout
+              setCurrentBetAmount(0);
+              // Update balance if provided
+              if (message.newBalance !== undefined) {
+                updateBalance(message.newBalance - balance, 'game_win', 'crash', 'crash_round', `Auto cashout at ${autoMultiplier}x`);
+              }
               break;
             default:
               // Silently ignore unknown message types to prevent error notifications
