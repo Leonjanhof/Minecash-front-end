@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // Types for Discord bot requests and responses
 interface DiscordBotRequest {
-  action: 'create_ticket' | 'check_user';
+  action: 'create_ticket' | 'check_user' | 'get_gc_limits';
   userId: string;
   type?: 'deposit' | 'withdraw' | 'support';
   amount?: number;
@@ -61,6 +61,9 @@ Deno.serve(async (req: Request) => {
           return createErrorResponse('Ticket type required for create_ticket action', 400);
         }
         return await handleCreateTicket(userId, type, amount, description);
+      
+      case 'get_gc_limits':
+        return await handleGetGCLimits();
       
       default:
         return createErrorResponse('Invalid action', 400);
@@ -129,12 +132,9 @@ async function handleCheckUser(userId: string): Promise<Response> {
       body: JSON.stringify({ userId }),
     });
 
-    if (!response.ok) {
-      console.error('Discord bot server error:', response.status, response.statusText);
-      return createErrorResponse('Failed to check user status', 500);
-    }
-
     const result = await response.json();
+    
+    // Always return 200 status, but include error info in response body
     return new Response(
       JSON.stringify(result),
       {
@@ -163,21 +163,26 @@ async function handleCreateTicket(
   description?: string
 ): Promise<Response> {
   try {
+    // Ensure amount is always included in the request body, even if null/undefined
+    const requestBody = {
+      userId,
+      type,
+      amount: amount !== undefined ? amount : null,
+      description: description || ''
+    };
+
     const response = await fetch(`${DISCORD_BOT_URL}/create-ticket`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${DISCORD_BOT_SECRET}`,
       },
-      body: JSON.stringify({ userId, type, amount, description }),
+      body: JSON.stringify(requestBody),
     });
 
-    if (!response.ok) {
-      console.error('Discord bot server error:', response.status, response.statusText);
-      return createErrorResponse('Failed to create ticket', 500);
-    }
-
     const result = await response.json();
+    
+    // Always return 200 status, but include error info in response body
     return new Response(
       JSON.stringify(result),
       {
@@ -195,5 +200,39 @@ async function handleCreateTicket(
   } catch (error) {
     console.error('Error creating ticket:', error);
     return createErrorResponse('Failed to create ticket', 500);
+  }
+}
+
+// Handle GC limits requests
+async function handleGetGCLimits(): Promise<Response> {
+  try {
+    const response = await fetch(`${DISCORD_BOT_URL}/gc-limits`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DISCORD_BOT_SECRET}`,
+      },
+    });
+
+    const result = await response.json();
+    
+    // Always return 200 status, but include error info in response body
+    return new Response(
+      JSON.stringify(result),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-client-info, apikey',
+        },
+      }
+    );
+    
+  } catch (error) {
+    console.error('Error getting GC limits:', error);
+    return createErrorResponse('Failed to get GC limits', 500);
   }
 } 

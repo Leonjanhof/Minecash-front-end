@@ -346,11 +346,11 @@ Hash: ${card.hash}`;
       </section>
 
       {/* Proof Section - Ladder Layout with Animated Lines */}
-      <section className="py-16 px-4">
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-white mb-12 text-center md:text-left">Proof</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-8 sm:mb-12 text-center md:text-left">Proof</h2>
           
-          <div className="relative">
+          <div className="relative overflow-hidden">
             {proofCards.map((card, index) => {
               const isEven = index % 2 === 0;
               const isLast = index === proofCards.length - 1;
@@ -365,10 +365,10 @@ Hash: ${card.hash}`;
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "-100px" }}
                     transition={{ duration: 0.6, delay: index * 0.2 }}
-                    className={`relative mb-16 md:mb-20 ${
+                    className={`relative mb-12 sm:mb-16 md:mb-20 ${
                       isEven 
-                        ? 'xl:translate-x-[-15%] 2xl:translate-x-[-10%]' 
-                        : 'xl:translate-x-[15%] 2xl:translate-x-[10%]'
+                        ? 'lg:translate-x-[-5%] xl:translate-x-[-10%] 2xl:translate-x-[-15%]' 
+                        : 'lg:translate-x-[5%] xl:translate-x-[10%] 2xl:translate-x-[15%]'
                     }`}
                   >
                     {/* Success Notification */}
@@ -379,25 +379,25 @@ Hash: ${card.hash}`;
                     )}
                     
                     <div 
-                      className="bg-[#2C2C2C] p-6 md:p-8 rounded-2xl font-mono text-[#00FFAA] shadow-[inset_0_0_20px_rgba(255,215,0,0.2)] hover:scale-105 hover:shadow-[0_20px_40px_rgba(255,215,0,0.3),0_0_30px_rgba(255,215,0,0.4),inset_0_1px_0_rgba(255,215,0,0.2)] transition-all duration-300 cursor-pointer group max-w-md mx-auto lg:max-w-lg xl:max-w-none border border-transparent hover:border-[rgba(255,215,0,0.8)]"
+                      className="bg-[#2C2C2C] p-4 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl font-mono text-[#00FFAA] shadow-[inset_0_0_20px_rgba(255,215,0,0.2)] hover:scale-105 hover:shadow-[0_20px_40px_rgba(255,215,0,0.3),0_0_30px_rgba(255,215,0,0.4),inset_0_1px_0_rgba(255,215,0,0.2)] transition-all duration-300 cursor-pointer group w-full max-w-sm sm:max-w-md mx-auto lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl border border-transparent hover:border-[rgba(255,215,0,0.8)]"
                       onClick={() => copyToClipboard(card, card.id)}
                     >
-                      <div className="space-y-2 text-sm md:text-base">
-                        <div className="flex items-center">
-                          <span className="text-[#FFD700] mr-4">Protocol:</span>
-                          <span className="text-[#00FFAA]">{card.protocol || 'N/A'}</span>
+                      <div className="space-y-2 text-xs sm:text-sm md:text-base">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
+                          <span className="text-[#FFD700] sm:mr-4 min-w-[60px] sm:min-w-[70px]">Protocol:</span>
+                          <span className="text-[#00FFAA] break-words">{card.protocol || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center">
-                          <span className="text-[#FFD700] mr-4">Algorithm:</span>
-                          <span className="text-[#00FFAA]">{card.algorithm || 'N/A'}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
+                          <span className="text-[#FFD700] sm:mr-4 min-w-[60px] sm:min-w-[70px]">Algorithm:</span>
+                          <span className="text-[#00FFAA] break-words">{card.algorithm || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center">
-                          <span className="text-[#FFD700] mr-4">Security:</span>
-                          <span className="text-[#00FFAA]">{card.security || 'N/A'}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0">
+                          <span className="text-[#FFD700] sm:mr-4 min-w-[60px] sm:min-w-[70px]">Security:</span>
+                          <span className="text-[#00FFAA] break-words">{card.security || 'N/A'}</span>
                         </div>
                         <div className="pt-2">
                           <div className="text-[#FFD700] mb-1">Hash:</div>
-                          <div className="text-[#00FFAA] text-xs break-all font-mono group-hover:text-sm transition-all duration-300">
+                          <div className="text-[#00FFAA] text-xs break-all font-mono group-hover:text-sm transition-all duration-300 max-w-full overflow-hidden">
                             <span className="group-hover:hidden">{card.hash.substring(0, 10)}...</span>
                             <span className="hidden group-hover:inline">{card.hash}</span>
                           </div>
@@ -415,12 +415,12 @@ Hash: ${card.hash}`;
 
                   {/* Simple Vertical Connection Line */}
                   {!isLast && (
-                    <div className="flex justify-center mb-16 md:mb-20">
+                    <div className="flex justify-center mb-12 sm:mb-16 md:mb-20">
                       <motion.div
                         className="w-0.5 bg-[#FFD700]"
-                        style={{ height: "120px" }}
+                        style={{ height: "80px" }}
                         initial={{ height: 0 }}
-                        whileInView={{ height: "120px" }}
+                        whileInView={{ height: "80px" }}
                         viewport={{ once: true, margin: "-50px" }}
                         transition={{ 
                           duration: 0.5, 

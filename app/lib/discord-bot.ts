@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 // Discord server invite link
-export const DISCORD_INVITE_LINK = 'https://discord.gg/5MQexs6Nbj';
+export const DISCORD_INVITE_LINK = 'https://discord.gg/2GDmTAfWhT';
 
 // Check if user is in Discord server
 export async function checkUserInDiscord(userId: string) {
@@ -33,6 +33,7 @@ export async function createSupportTicket(userId: string, description: string) {
         action: 'create_ticket',
         userId: userId,
         type: 'support',
+        amount: null,
         description: description
       }
     });

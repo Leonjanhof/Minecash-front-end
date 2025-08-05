@@ -21,7 +21,26 @@ export function ChatSidebar({ gamemode, messages = [] }: ChatSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [message, setMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(messages);
+  const [maxMessageLength, setMaxMessageLength] = useState(200); // Default fallback
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch chat settings
+  useEffect(() => {
+    const fetchChatSettings = async () => {
+      try {
+        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+        const response = await fetch(`${BACKEND_URL}/api/chat-settings`);
+        if (response.ok) {
+          const data = await response.json();
+          setMaxMessageLength(data.chatSettings?.maxMessageLength || 200);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat settings:', error);
+      }
+    };
+    
+    fetchChatSettings();
+  }, []);
 
   // Listen for incoming chat messages and history
   useEffect(() => {
@@ -175,15 +194,15 @@ export function ChatSidebar({ gamemode, messages = [] }: ChatSidebarProps) {
               <input
                 type="text"
                 value={message}
-                onChange={(e) => setMessage(e.target.value.slice(0, 300))}
-                placeholder="Type your message... (max 300 chars)"
-                maxLength={300}
+                onChange={(e) => setMessage(e.target.value.slice(0, maxMessageLength))}
+                placeholder={`Type your message... (max ${maxMessageLength} chars)`}
+                maxLength={maxMessageLength}
                 className="w-full bg-white/10 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-yellow-400 transition-colors"
                 disabled={!isExpanded || !user}
               />
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-400">
-                  {message.length}/300
+                  {message.length}/{maxMessageLength}
                 </span>
                 <button
                   type="submit"

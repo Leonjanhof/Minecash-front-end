@@ -6,7 +6,7 @@ import { ReviewModal } from "../components/ReviewModal";
 import { Link, useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
 import { checkUserInDiscord, createDepositTicket, createWithdrawTicket, DISCORD_INVITE_LINK } from "../lib/discord-bot";
-import { userStatsHelpers } from "../lib/supabase";
+import { userStatsHelpers, gcLimitsHelpers } from "../lib/supabase";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -58,6 +58,10 @@ export default function Profile() {
   const [pendingAction, setPendingAction] = useState<'deposit' | 'withdraw' | null>(null);
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState('');
+  const [gcLimits, setGcLimits] = useState({
+    deposit: { min: 50, max: 500 },
+    withdraw: { min: 50, max: 500 }
+  });
 
   // Fetch user statistics when user profile is available
   useEffect(() => {
@@ -81,6 +85,20 @@ export default function Profile() {
     fetchUserStats();
   }, [userProfile?.id]);
 
+  // Fetch GC limits
+  useEffect(() => {
+    const fetchGCLimits = async () => {
+      try {
+        const limits = await gcLimitsHelpers.getGCLimits();
+        setGcLimits(limits);
+      } catch (error) {
+        console.error('Error fetching GC limits:', error);
+      }
+    };
+
+    fetchGCLimits();
+  }, []);
+
   // Handle highlight parameter from URL
   useEffect(() => {
     if (searchParams.get('highlight') === 'deposit') {
@@ -101,7 +119,7 @@ export default function Profile() {
       setNotification({
         show: true,
         type: 'error',
-        title: 'Authentication Error',
+        title: 'Authentication error',
         message: 'Please sign in again to continue.'
       });
       return;
@@ -114,7 +132,7 @@ export default function Profile() {
       setNotification({
         show: true,
         type: 'error',
-        title: 'Discord ID Not Found',
+        title: 'Discord ID not found',
         message: 'Unable to find your Discord ID. Please sign in again with Discord.'
       });
       return;
@@ -145,17 +163,19 @@ export default function Profile() {
       setNotification({
         show: true,
         type: 'error',
-        title: 'Connection Error',
+        title: 'Connection error',
         message: 'Unable to connect to Discord service. Please try again.'
       });
     }
   };
 
   const handleAmountSubmit = async () => {
-    // Validate amount
+    // Validate amount using dynamic limits
     const numAmount = parseInt(amount);
-    if (!numAmount || numAmount < 50 || numAmount > 500) {
-      setAmountError('Amount must be between 50 and 500 GC');
+    const limits = pendingAction === 'deposit' ? gcLimits.deposit : gcLimits.withdraw;
+    
+    if (!numAmount || numAmount < limits.min || numAmount > limits.max) {
+      setAmountError(`Amount must be between ${limits.min} and ${limits.max} GC`);
       return;
     }
 
@@ -171,7 +191,7 @@ export default function Profile() {
       setNotification({
         show: true,
         type: 'error',
-        title: 'Discord ID Not Found',
+        title: 'Discord ID not found',
         message: 'Unable to find your Discord ID. Please sign in again with Discord.'
       });
       return;
@@ -200,7 +220,7 @@ export default function Profile() {
           show: true,
           type: 'error',
           title: 'Ticket creation failed',
-          message: ticketResult.message || 'Unable to create support ticket. Please try again.'
+          message: ticketResult.message || 'Unable to create ticket. Please try again.'
         });
       }
     } catch (error) {
@@ -208,8 +228,8 @@ export default function Profile() {
       setNotification({
         show: true,
         type: 'error',
-        title: 'Connection Error',
-        message: 'Unable to create support ticket. Please try again.'
+        title: 'Connection error',
+        message: 'Unable to create ticket. Please try again.'
       });
     }
 
@@ -358,7 +378,7 @@ export default function Profile() {
 
         {/* Casino Stats Section */}
         <div className="bg-gray-900 rounded-xl p-6 border border-yellow-500/20">
-          <h2 className="text-2xl font-bold text-white mb-6">📈</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">Statistics</h2>
           
           {/* Overview Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -481,7 +501,10 @@ export default function Profile() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="bg-gray-900 rounded-xl p-8 max-w-md w-full border border-yellow-500/20">
             <h2 className="text-2xl font-bold text-white mb-4">Enter amount:</h2>
-            <p className="text-gray-300 mb-6">Please enter the amount you want to {pendingAction === 'deposit' ? 'deposit' : 'withdraw'} (50-500 GC).</p>
+            <p className="text-gray-300 mb-6">
+              Please enter the amount you want to {pendingAction === 'deposit' ? 'deposit' : 'withdraw'} 
+              ({pendingAction === 'deposit' ? gcLimits.deposit.min : gcLimits.withdraw.min}-{pendingAction === 'deposit' ? gcLimits.deposit.max : gcLimits.withdraw.max} GC).
+            </p>
             
             <div className="mb-4">
               <label htmlFor="amount" className="block text-sm font-semibold text-white mb-1">Amount (GC)</label>

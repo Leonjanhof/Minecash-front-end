@@ -48,58 +48,6 @@ interface GamemodeStats {
   isActive: boolean;
 }
 
-const gamemodeStats: GamemodeStats[] = [
-  { 
-    gamemode: "Crash", 
-    icon: "", 
-    uptime: 99.7, 
-    playersOnline: 0, 
-    houseProfit: 133.50, 
-    houseExpense: 0,
-    totalBets: 23,
-    wins: 4,
-    losses: 19,
-    avgMultiplier: 1.41,
-    isActive: true
-  },
-  { 
-    gamemode: "Blackjack", 
-    icon: "", 
-    uptime: 0, 
-    playersOnline: 0, 
-    houseProfit: 0, 
-    houseExpense: 0,
-    isActive: false
-  },
-  { 
-    gamemode: "Roulette", 
-    icon: "", 
-    uptime: 0, 
-    playersOnline: 0, 
-    houseProfit: 0, 
-    houseExpense: 0,
-    isActive: false
-  },
-  { 
-    gamemode: "Slots", 
-    icon: "", 
-    uptime: 0, 
-    playersOnline: 0, 
-    houseProfit: 0, 
-    houseExpense: 0,
-    isActive: false
-  },
-  { 
-    gamemode: "Hi-Lo", 
-    icon: "", 
-    uptime: 0, 
-    playersOnline: 0, 
-    houseProfit: 0, 
-    houseExpense: 0,
-    isActive: false
-  },
-];
-
 const adminLogs = [
   { timestamp: "2024-01-15 14:32", action: "User banned", details: "SpamBot banned for spam", admin: "AdminUser" },
   { timestamp: "2024-01-15 14:28", action: "GC adjustment", details: "Manual GC adjustment: +500 to HighRoller", admin: "AdminUser" },
@@ -145,6 +93,67 @@ export default function Admin() {
   const [updatingGamemode, setUpdatingGamemode] = useState<string | null>(null);
   const [emergencyStopping, setEmergencyStopping] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [showGCLimitsModal, setShowGCLimitsModal] = useState(false);
+  const [gcLimits, setGcLimits] = useState({
+    deposit: { min: 50, max: 500 },
+    withdraw: { min: 50, max: 500 }
+  });
+  const [updatingLimits, setUpdatingLimits] = useState(false);
+  const [gameConfig, setGameConfig] = useState<any>(null);
+  const [loadingGameConfig, setLoadingGameConfig] = useState(false);
+  const [showGameConfigModal, setShowGameConfigModal] = useState(false);
+  const [updatingGameConfig, setUpdatingGameConfig] = useState(false);
+  const [gamemodeStats, setGamemodeStats] = useState<GamemodeStats[]>([
+    { 
+      gamemode: "Crash", 
+      icon: "", 
+      uptime: 99.7, 
+      playersOnline: 0, 
+      houseProfit: 0, 
+      houseExpense: 0,
+      totalBets: 0,
+      wins: 0,
+      losses: 0,
+      avgMultiplier: 0,
+      isActive: true
+    },
+    { 
+      gamemode: "Blackjack", 
+      icon: "", 
+      uptime: 0, 
+      playersOnline: 0, 
+      houseProfit: 0, 
+      houseExpense: 0,
+      isActive: false
+    },
+    { 
+      gamemode: "Roulette", 
+      icon: "", 
+      uptime: 0, 
+      playersOnline: 0, 
+      houseProfit: 0, 
+      houseExpense: 0,
+      isActive: false
+    },
+    { 
+      gamemode: "Slots", 
+      icon: "", 
+      uptime: 0, 
+      playersOnline: 0, 
+      houseProfit: 0, 
+      houseExpense: 0,
+      isActive: false
+    },
+    { 
+      gamemode: "Hi-Lo", 
+      icon: "", 
+      uptime: 0, 
+      playersOnline: 0, 
+      houseProfit: 0, 
+      houseExpense: 0,
+      isActive: false
+    },
+  ]);
 
   // Fetch users on component mount
   useEffect(() => {
@@ -153,8 +162,97 @@ export default function Admin() {
       fetchTotalGCCirculation();
       fetchAdminLogs();
       fetchGamemodeRestrictions();
+      fetchGCLimits();
+      fetchGameConfig();
+      fetchCrashStats();
     }
   }, [isAdmin]);
+
+  // Refresh crash stats every 30 seconds
+  useEffect(() => {
+    if (isAdmin) {
+      const interval = setInterval(() => {
+        fetchCrashStats();
+      }, 30000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isAdmin]);
+
+  const fetchGameConfig = async () => {
+    try {
+      setLoadingGameConfig(true);
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${BACKEND_URL}/api/game-config`, {
+        headers: {
+          'Authorization': `Bearer ${await supabase.auth.getSession().then(s => s.data.session?.access_token)}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setGameConfig(data.config);
+      } else {
+        console.error('Error fetching game config');
+      }
+    } catch (error) {
+      console.error('Error fetching game config:', error);
+    } finally {
+      setLoadingGameConfig(false);
+    }
+  };
+
+  const updateGameConfig = async (newConfig: any) => {
+    try {
+      setUpdatingGameConfig(true);
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${BACKEND_URL}/api/game-config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await supabase.auth.getSession().then(s => s.data.session?.access_token)}`
+        },
+        body: JSON.stringify({ config: newConfig })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setGameConfig(data.config);
+        console.log('Game configuration updated successfully');
+      } else {
+        console.error('Error updating game config');
+      }
+    } catch (error) {
+      console.error('Error updating game config:', error);
+    } finally {
+      setUpdatingGameConfig(false);
+    }
+  };
+
+  const resetGameConfig = async () => {
+    try {
+      setUpdatingGameConfig(true);
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+      const response = await fetch(`${BACKEND_URL}/api/game-config/reset`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${await supabase.auth.getSession().then(s => s.data.session?.access_token)}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setGameConfig(data.config);
+        console.log('Game configuration reset to defaults');
+      } else {
+        console.error('Error resetting game config');
+      }
+    } catch (error) {
+      console.error('Error resetting game config:', error);
+    } finally {
+      setUpdatingGameConfig(false);
+    }
+  };
 
   const fetchGamemodeRestrictions = async () => {
     try {
@@ -165,6 +263,98 @@ export default function Admin() {
       console.error('Error fetching gamemode restrictions:', error);
     } finally {
       setLoadingRestrictions(false);
+    }
+  };
+
+  const fetchGCLimits = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('gc_limits')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching GC limits:', error);
+        return;
+      }
+
+      const limits = {
+        deposit: { min: 50, max: 500 },
+        withdraw: { min: 50, max: 500 }
+      };
+
+      data?.forEach(limit => {
+        limits[limit.limit_type] = {
+          min: limit.min_amount,
+          max: limit.max_amount
+        };
+      });
+
+      setGcLimits(limits);
+    } catch (error) {
+      console.error('Error fetching GC limits:', error);
+    }
+  };
+
+  const updateGCLimits = async (type: 'deposit' | 'withdraw', min: number, max: number) => {
+    try {
+      setUpdatingLimits(true);
+
+      // Get the current user's ID from the users table
+      let adminUserId = null;
+      if (user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .single();
+
+        if (userError) {
+          console.error('Error getting admin user ID:', userError);
+        } else {
+          adminUserId = userData?.id;
+        }
+      }
+
+      const { error } = await supabase
+        .from('gc_limits')
+        .update({
+          min_amount: min,
+          max_amount: max,
+          updated_at: new Date().toISOString(),
+          updated_by: adminUserId
+        })
+        .eq('limit_type', type);
+
+      if (error) {
+        console.error('Error updating GC limits:', error);
+        return;
+      }
+
+      // Update local state
+      setGcLimits(prev => ({
+        ...prev,
+        [type]: { min, max }
+      }));
+
+      // Log the action
+      const { error: logError } = await supabase
+        .from('admin_logs')
+        .insert({
+          message: `GC ${type} limits updated: min ${min}, max ${max}`,
+          level: 'info',
+          details: { type, min, max },
+          source: 'admin_panel'
+        });
+
+      if (logError) {
+        console.error('Error logging admin action:', logError);
+      }
+
+      console.log(`Successfully updated ${type} GC limits`);
+    } catch (error) {
+      console.error('Error updating GC limits:', error);
+    } finally {
+      setUpdatingLimits(false);
     }
   };
 
@@ -258,19 +448,89 @@ export default function Admin() {
       const { data, error } = await supabase
         .from('admin_logs')
         .select('*')
-        .order('timestamp', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) {
         console.error('Error fetching admin logs:', error);
+        setAdminLogs([]);
         return;
       }
 
       setAdminLogs(data || []);
     } catch (error) {
       console.error('Error fetching admin logs:', error);
+      setAdminLogs([]);
     } finally {
       setLoadingLogs(false);
+    }
+  };
+
+  const fetchCrashStats = async () => {
+    try {
+      // Get crash game stats from database
+      const { data: crashStats, error } = await supabase
+        .from('gc_transactions')
+        .select('*')
+        .eq('game_type', 'crash');
+
+      if (error) {
+        console.error('Error fetching crash stats:', error);
+        return;
+      }
+
+      // Calculate stats
+      const totalBets = crashStats?.filter(t => t.transaction_type === 'game_loss').length || 0;
+      const wins = crashStats?.filter(t => t.transaction_type === 'game_win').length || 0;
+      const losses = totalBets - wins;
+      
+      const totalProfit = crashStats?.reduce((sum, t) => {
+        if (t.transaction_type === 'game_loss') return sum + Math.abs(t.amount);
+        if (t.transaction_type === 'game_win') return sum - Math.abs(t.amount);
+        return sum;
+      }, 0) || 0;
+
+      const totalExpense = crashStats?.filter(t => t.transaction_type === 'game_win')
+        .reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
+
+      // Get current game state for players online (get the most recent one)
+      let playersOnline = 0;
+      try {
+        const { data: gameState, error: gameStateError } = await supabase
+          .from('crash_game_state')
+          .select('active_players_count')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (gameStateError) {
+          console.error('Error fetching game state:', gameStateError);
+        } else if (gameState && gameState.length > 0) {
+          playersOnline = gameState[0]?.active_players_count || 0;
+        }
+      } catch (gameStateError) {
+        console.error('Error fetching game state:', gameStateError);
+        playersOnline = 0;
+      }
+
+      // Update crash stats
+      setGamemodeStats(prev => prev.map(stat => {
+        if (stat.gamemode === 'Crash') {
+          return {
+            ...stat,
+            totalBets,
+            wins,
+            losses,
+            houseProfit: totalProfit,
+            houseExpense: totalExpense,
+            playersOnline,
+            avgMultiplier: wins > 0 ? parseFloat((totalExpense / wins).toFixed(2)) : 0
+          };
+        }
+        return stat;
+      }));
+
+    } catch (error) {
+      console.error('Error fetching crash stats:', error);
     }
   };
 
@@ -286,19 +546,29 @@ export default function Admin() {
 
   const getUserBalanceFromTransactions = async (userId: number): Promise<number> => {
     try {
+      // First check if user has any transactions
+      const { count, error: countError } = await supabase
+        .from('gc_transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      if (countError || count === 0) {
+        return 0;
+      }
+
+      // If user has transactions, get the latest balance
       const { data, error } = await supabase
         .from('gc_transactions')
         .select('balance_after')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         return 0;
       }
 
-      return parseFloat(data.balance_after || '0');
+      return parseFloat(data[0].balance_after || '0');
     } catch (error) {
       console.error('Error fetching balance from transactions:', error);
       return 0;
@@ -328,19 +598,28 @@ export default function Admin() {
       // Fetch balances for each user using the proper helper function
       const formattedUsers = await Promise.all(
         usersData?.map(async (user) => {
-          let balance = await gcBalanceHelpers.getUserBalance(user.id);
-          
-          // If balance is 0, try to get it from transactions
-          if (balance === 0) {
-            balance = await getUserBalanceFromTransactions(user.id);
+          try {
+            let balance = await gcBalanceHelpers.getUserBalance(user.id);
+            
+            // If balance is 0, try to get it from transactions
+            if (balance === 0) {
+              balance = await getUserBalanceFromTransactions(user.id);
+            }
+            
+            return {
+              ...user,
+              gc_balance: balance,
+              // Provide a better fallback for username
+              displayName: user.username || user.email?.split('@')[0] || `User-${user.id}`
+            };
+          } catch (error) {
+            console.error(`Error fetching balance for user ${user.id}:`, error);
+            return {
+              ...user,
+              gc_balance: 0,
+              displayName: user.username || user.email?.split('@')[0] || `User-${user.id}`
+            };
           }
-          
-          return {
-            ...user,
-            gc_balance: balance,
-            // Provide a better fallback for username
-            displayName: user.username || user.email?.split('@')[0] || `User-${user.id}`
-          };
         }) || []
       );
 
@@ -367,7 +646,7 @@ export default function Admin() {
       // Calculate total deposits and withdrawals for reference
       const { data: transactionData, error: transactionError } = await supabase
         .from('gc_transactions')
-        .select('transaction_type, amount');
+        .select('transaction_type, amount, game_type');
 
       if (transactionError) {
         console.error('Error fetching GC transactions:', transactionError);
@@ -379,16 +658,18 @@ export default function Admin() {
         sum + parseFloat(balance.balance || '0'), 0
       ) || 0;
 
-      // Calculate total deposits and withdrawals for reference
+      // Calculate total deposits and withdrawals for reference (exclude admin transactions)
       let totalDeposits = 0;
       let totalWithdrawals = 0;
 
       transactionData?.forEach(transaction => {
         const amount = parseFloat(transaction.amount || '0');
+        const gameType = transaction.game_type;
         
-        if (transaction.transaction_type === 'deposit') {
+        // Only count real deposits/withdrawals, exclude admin adjustments
+        if (transaction.transaction_type === 'deposit' && gameType !== 'admin') {
           totalDeposits += amount;
-        } else if (transaction.transaction_type === 'withdrawal') {
+        } else if (transaction.transaction_type === 'withdrawal' && gameType !== 'admin') {
           totalWithdrawals += amount;
         }
       });
@@ -493,38 +774,24 @@ export default function Admin() {
       const user = users.find(u => u.id === userId);
       if (!user) return;
 
-      // Direct balance reset to 0
-      const { error } = await supabase
-        .from('gc_balances')
-        .update({ balance: 0 })
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('Error resetting user GC:', error);
-        return;
-      }
-
-      // Create a transaction record for audit trail
-      const { error: transactionError } = await supabase
-        .from('gc_transactions')
-        .insert({
-          user_id: userId,
-          transaction_type: 'refund',
-          amount: 0,
-          balance_before: user.gc_balance || 0,
-          balance_after: 0,
-          game_type: 'admin',
-          game_id: 'admin_reset',
-          description: 'GC balance reset by admin'
-        });
-
-      if (transactionError) {
-        console.error('Error creating reset transaction:', transactionError);
-      }
+      const currentBalance = user.gc_balance || 0;
+      
+      // Calculate the adjustment needed to reach 0
+      const adjustment = -currentBalance; // Negative to reduce to 0
+      
+      // Use the proper balance update method with admin transaction type
+      const newBalance = await gcBalanceHelpers.updateBalance(
+        userId,
+        adjustment,
+        'refund', // Use refund type for admin resets
+        'admin',
+        'admin_reset',
+        `GC balance reset by admin (was ${currentBalance})`
+      );
 
       // Update local state
       setUsers(users.map(u => 
-        u.id === userId ? { ...u, gc_balance: 0 } : u
+        u.id === userId ? { ...u, gc_balance: newBalance } : u
       ));
 
       // Refresh total GC circulation
@@ -541,7 +808,7 @@ export default function Admin() {
 
       let transactionType = 'bonus';
       if (adjustment < 0) {
-        transactionType = 'withdrawal';
+        transactionType = 'refund'; // Use refund for negative admin adjustments
       }
 
       // Use the proper balance update method
@@ -602,7 +869,8 @@ export default function Admin() {
     { id: "users", name: "👥 User management", icon: "👥" },
     { id: "gc", name: "💰 GC tracker", icon: "💰" },
     { id: "stats", name: "📊 Gamemode stats", icon: "📊" },
-    { id: "logs", name: "⚙️ Admin logs & tools", icon: "⚙️" },
+    { id: "config", name: "⚙️ Game config", icon: "⚙️" },
+    { id: "logs", name: "📋 Admin logs & tools", icon: "📋" },
   ];
 
   return (
@@ -785,21 +1053,23 @@ export default function Admin() {
                 {/* Individual User GC Editor */}
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-xl font-bold text-white mb-4">Individual GC balance editor</h3>
-                  <div className="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-hide">
-                    <table className="w-full">
+                  
+                  {/* Desktop Table View */}
+                  <div className="hidden lg:block overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-hide">
+                    <table className="w-full min-w-[800px]">
                       <thead>
                         <tr className="border-b border-gray-700">
-                          <th className="text-left p-3 text-white">User</th>
-                          <th className="text-left p-3 text-white">Current balance</th>
-                          <th className="text-left p-3 text-white">Adjustment</th>
-                          <th className="text-left p-3 text-white">Actions</th>
+                          <th className="text-left p-3 text-white whitespace-nowrap">User</th>
+                          <th className="text-left p-3 text-white whitespace-nowrap">Current balance</th>
+                          <th className="text-left p-3 text-white whitespace-nowrap">Adjustment</th>
+                          <th className="text-left p-3 text-white whitespace-nowrap">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {users.map((user) => (
-                          <tr key={user.id} className="border-b border-gray-700">
-                            <td className="p-3 text-white">{user.displayName}</td>
-                            <td className="p-3 text-yellow-400">{user.gc_balance || 0} GC</td>
+                          <tr key={user.id} className="border-b border-gray-700 hover:bg-gray-700">
+                            <td className="p-3 text-white whitespace-nowrap">{user.displayName}</td>
+                            <td className="p-3 text-yellow-400 whitespace-nowrap">{user.gc_balance || 0} GC</td>
                             <td className="p-3">
                               <input
                                 type="number"
@@ -809,10 +1079,10 @@ export default function Admin() {
                                   ...prev, 
                                   [user.id]: parseFloat(e.target.value) || 0 
                                 }))}
-                                className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white w-24"
+                                className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white w-24 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                               />
                             </td>
-                            <td className="p-3">
+                            <td className="p-3 whitespace-nowrap">
                               <button 
                                 onClick={() => adjustUserGC(user.id, gcAdjustments[user.id] || 0)}
                                 className="bg-blue-600 hover:bg-blue-700 hover:shadow-[0_0_10px_rgba(255,255,255,0.3)] text-white px-3 py-1 rounded text-sm font-semibold mr-2 cursor-pointer"
@@ -830,6 +1100,51 @@ export default function Admin() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="lg:hidden space-y-4 max-h-[600px] overflow-y-auto scrollbar-hide">
+                    {users.map((user) => (
+                      <div key={user.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-white font-semibold">{user.displayName}</span>
+                            <span className="text-yellow-400 font-bold">{user.gc_balance || 0} GC</span>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-300 mb-2">Adjustment</label>
+                              <input
+                                type="number"
+                                placeholder="±amount"
+                                value={gcAdjustments[user.id] || ''}
+                                onChange={(e) => setGcAdjustments(prev => ({ 
+                                  ...prev, 
+                                  [user.id]: parseFloat(e.target.value) || 0 
+                                }))}
+                                className="w-full bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                              />
+                            </div>
+                            
+                            <div className="flex space-x-2">
+                              <button 
+                                onClick={() => adjustUserGC(user.id, gcAdjustments[user.id] || 0)}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 hover:shadow-[0_0_10px_rgba(255,255,255,0.3)] text-white px-3 py-2 rounded text-sm font-semibold cursor-pointer"
+                              >
+                                Apply
+                              </button>
+                              <button 
+                                onClick={() => setGcAdjustments(prev => ({ ...prev, [user.id]: 0 }))}
+                                className="flex-1 bg-red-600 hover:bg-red-700 hover:shadow-[0_0_10px_rgba(255,255,255,0.3)] text-white px-3 py-2 rounded text-sm font-semibold cursor-pointer"
+                              >
+                                Reset
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -983,8 +1298,11 @@ export default function Admin() {
                       <span>Emergency stop</span>
                     )}
                   </button>
-                  <button className="bg-blue-600 hover:bg-blue-700 hover:shadow-[0_0_10px_rgba(255,255,255,0.3)] text-white px-4 py-2 rounded font-semibold flex items-center justify-center space-x-2 cursor-pointer">
-                    <span>Generate report</span>
+                  <button 
+                    onClick={() => setShowGCLimitsModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 hover:shadow-[0_0_10px_rgba(255,255,255,0.3)] text-white px-4 py-2 rounded font-semibold flex items-center justify-center space-x-2 cursor-pointer"
+                  >
+                    <span>GC limits</span>
                   </button>
                 </div>
 
@@ -1039,6 +1357,132 @@ export default function Admin() {
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Game Configuration Tab */}
+            {activeTab === "config" && (
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-6">Game configuration</h2>
+                
+                {loadingGameConfig ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+                    <p className="text-gray-400">Loading game configuration...</p>
+                  </div>
+                ) : gameConfig ? (
+                  <div className="space-y-6">
+                    {/* Bet Limits Section */}
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold text-white">Bet limits</h3>
+                        <button
+                          onClick={() => setShowGameConfigModal(true)}
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded font-semibold cursor-pointer"
+                        >
+                          Edit settings
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(gameConfig.betLimits || {}).map(([gamemode, limits]: [string, any]) => (
+                          <div key={gamemode} className="bg-gray-700 rounded p-4">
+                            <h4 className="text-lg font-semibold text-white mb-2 capitalize">{gamemode}</h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Min:</span>
+                                <span className="text-white font-bold">{limits.min} GC</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Max:</span>
+                                <span className="text-white font-bold">{limits.max} GC</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* House Edge Section */}
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">House edge</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(gameConfig.houseEdge || {}).map(([gamemode, edge]: [string, any]) => (
+                          <div key={gamemode} className="bg-gray-700 rounded p-4">
+                            <h4 className="text-lg font-semibold text-white mb-2 capitalize">{gamemode}</h4>
+                            <div className="text-center">
+                              <span className="text-2xl font-bold text-yellow-400">{(edge * 100).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Game Timing Section */}
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Game timing</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {Object.entries(gameConfig.gameTiming || {}).map(([phase, duration]: [string, any]) => (
+                          <div key={phase} className="bg-gray-700 rounded p-4">
+                            <h4 className="text-lg font-semibold text-white mb-2">
+                              {phase === 'bettingPhase' ? 'Betting phase' : 
+                               phase === 'gamePhase' ? 'Game phase' : 
+                               phase === 'resultPhase' ? 'Result phase' : 
+                               phase.charAt(0).toUpperCase() + phase.slice(1)}
+                            </h4>
+                            <div className="text-center">
+                              <span className="text-2xl font-bold text-blue-400">{Math.round(duration / 1000)}s</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Chat Settings Section */}
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Chat settings</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {Object.entries(gameConfig.chatSettings || {}).map(([setting, value]: [string, any]) => (
+                          <div key={setting} className="bg-gray-700 rounded p-4">
+                            <h4 className="text-lg font-semibold text-white mb-2">
+                              {setting === 'messageRateLimit' ? 'Message rate limit' : 
+                               setting === 'maxMessageLength' ? 'Max message length' : 
+                               setting === 'maxHistoryLength' ? 'Max history length' : 
+                               setting.charAt(0).toUpperCase() + setting.slice(1)}
+                            </h4>
+                            <div className="text-center">
+                              <span className="text-2xl font-bold text-green-400">{value}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Balance Limits Section */}
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-xl font-bold text-white mb-4">Balance limits</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-gray-700 rounded p-4">
+                          <h4 className="text-lg font-semibold text-white mb-2">Minimum balance</h4>
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-red-400">{gameConfig.balanceLimits?.minBalance || 0} GC</span>
+                          </div>
+                        </div>
+                        <div className="bg-gray-700 rounded p-4">
+                          <h4 className="text-lg font-semibold text-white mb-2">Maximum balance</h4>
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-green-400">{gameConfig.balanceLimits?.maxBalance || 1000000} GC</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">Failed to load game configuration</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1271,6 +1715,295 @@ export default function Admin() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* GC Limits Modal */}
+        {showGCLimitsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">Gc limits management</h3>
+                <button
+                  onClick={() => setShowGCLimitsModal(false)}
+                  className="text-gray-400 hover:text-white text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <p className="text-gray-300 mb-4">
+                  Configure the minimum and maximum gc amounts for deposits and withdrawals. These limits will be applied to all user transactions.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Deposit Limits */}
+                  <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h4 className="text-lg font-semibold text-white mb-4">
+                      Deposit limits
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Minimum amount (GC)</label>
+                        <input
+                          type="number"
+                          value={gcLimits.deposit.min}
+                          onChange={(e) => setGcLimits(prev => ({
+                            ...prev,
+                            deposit: { ...prev.deposit, min: parseInt(e.target.value) || 0 }
+                          }))}
+                          className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          min="1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Maximum amount (GC)</label>
+                        <input
+                          type="number"
+                          value={gcLimits.deposit.max}
+                          onChange={(e) => setGcLimits(prev => ({
+                            ...prev,
+                            deposit: { ...prev.deposit, max: parseInt(e.target.value) || 0 }
+                          }))}
+                          className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          min="1"
+                        />
+                      </div>
+                      
+                      <button
+                        onClick={() => updateGCLimits('deposit', gcLimits.deposit.min, gcLimits.deposit.max)}
+                        disabled={updatingLimits}
+                        className={`w-full px-4 py-2 rounded font-semibold cursor-pointer ${
+                          updatingLimits 
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                      >
+                        {updatingLimits ? 'Updating...' : 'Update deposit limits'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Withdrawal Limits */}
+                  <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h4 className="text-lg font-semibold text-white mb-4">
+                      Withdrawal limits
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Minimum amount (GC)</label>
+                        <input
+                          type="number"
+                          value={gcLimits.withdraw.min}
+                          onChange={(e) => setGcLimits(prev => ({
+                            ...prev,
+                            withdraw: { ...prev.withdraw, min: parseInt(e.target.value) || 0 }
+                          }))}
+                          className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          min="1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Maximum amount (GC)</label>
+                        <input
+                          type="number"
+                          value={gcLimits.withdraw.max}
+                          onChange={(e) => setGcLimits(prev => ({
+                            ...prev,
+                            withdraw: { ...prev.withdraw, max: parseInt(e.target.value) || 0 }
+                          }))}
+                          className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                          min="1"
+                        />
+                      </div>
+                      
+                      <button
+                        onClick={() => updateGCLimits('withdraw', gcLimits.withdraw.min, gcLimits.withdraw.max)}
+                        disabled={updatingLimits}
+                        className={`w-full px-4 py-2 rounded font-semibold cursor-pointer ${
+                          updatingLimits 
+                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                            : 'bg-red-600 hover:bg-red-700 text-white'
+                        }`}
+                      >
+                        {updatingLimits ? 'Updating...' : 'Update withdrawal limits'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowGCLimitsModal(false)}
+                    className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded font-semibold cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Game Config Editing Modal */}
+        {showGameConfigModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-900 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto" style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(75, 85, 99, 0.3) transparent'
+            }}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-white">Edit game configuration</h3>
+                <button
+                  onClick={() => setShowGameConfigModal(false)}
+                  className="text-gray-400 hover:text-white text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              {gameConfig && (
+                <div className="space-y-6">
+                  {/* Bet Limits Editing */}
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-white mb-4">Bet limits</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(gameConfig.betLimits || {}).map(([gamemode, limits]: [string, any]) => (
+                        <div key={gamemode} className="bg-gray-700 rounded p-4">
+                          <h5 className="text-md font-semibold text-white mb-3 capitalize">{gamemode}</h5>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm text-gray-300 mb-1">Min bet (GC)</label>
+                              <input
+                                type="number"
+                                value={limits.min}
+                                onChange={(e) => {
+                                  const newConfig = { ...gameConfig };
+                                  newConfig.betLimits[gamemode].min = parseInt(e.target.value) || 1;
+                                  setGameConfig(newConfig);
+                                }}
+                                className="w-full px-3 py-2 rounded bg-gray-600 text-white border border-gray-500"
+                                min="1"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm text-gray-300 mb-1">Max bet (GC)</label>
+                              <input
+                                type="number"
+                                value={limits.max}
+                                onChange={(e) => {
+                                  const newConfig = { ...gameConfig };
+                                  newConfig.betLimits[gamemode].max = parseInt(e.target.value) || 1000;
+                                  setGameConfig(newConfig);
+                                }}
+                                className="w-full px-3 py-2 rounded bg-gray-600 text-white border border-gray-500"
+                                min="1"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* House Edge Editing */}
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-white mb-4">House edge (%)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Object.entries(gameConfig.houseEdge || {}).map(([gamemode, edge]: [string, any]) => (
+                        <div key={gamemode} className="bg-gray-700 rounded p-4">
+                          <h5 className="text-md font-semibold text-white mb-3 capitalize">{gamemode}</h5>
+                          <div>
+                            <label className="block text-sm text-gray-300 mb-1">House edge (%)</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={(edge * 100).toFixed(1)}
+                              onChange={(e) => {
+                                const newConfig = { ...gameConfig };
+                                newConfig.houseEdge[gamemode] = parseFloat(e.target.value) / 100;
+                                setGameConfig(newConfig);
+                              }}
+                              className="w-full px-3 py-2 rounded bg-gray-600 text-white border border-gray-500"
+                              min="0"
+                              max="10"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Game Timing Editing */}
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-white mb-4">Game timing (seconds)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {Object.entries(gameConfig.gameTiming || {}).map(([phase, duration]: [string, any]) => (
+                        <div key={phase} className="bg-gray-700 rounded p-4">
+                          <h5 className="text-md font-semibold text-white mb-3">
+                            {phase === 'bettingPhase' ? 'Betting phase' : 
+                             phase === 'gamePhase' ? 'Game phase' : 
+                             phase === 'resultPhase' ? 'Result phase' : 
+                             phase.charAt(0).toUpperCase() + phase.slice(1)}
+                          </h5>
+                          <div>
+                            <label className="block text-sm text-gray-300 mb-1">
+                              {phase === 'gamePhase' ? 'Duration (0 = unlimited for crash)' : 'Duration (seconds)'}
+                            </label>
+                            <input
+                              type="number"
+                              value={Math.round(duration / 1000)}
+                              onChange={(e) => {
+                                const newConfig = { ...gameConfig };
+                                newConfig.gameTiming[phase] = parseInt(e.target.value) * 1000;
+                                setGameConfig(newConfig);
+                              }}
+                              className="w-full px-3 py-2 rounded bg-gray-600 text-white border border-gray-500"
+                              min={phase === 'gamePhase' ? "0" : "1"}
+                              max="300"
+                            />
+                            {phase === 'gamePhase' && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                Set to 0 for unlimited (crash games only)
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => setShowGameConfigModal(false)}
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        updateGameConfig(gameConfig);
+                        setShowGameConfigModal(false);
+                      }}
+                      disabled={updatingGameConfig}
+                      className={`px-4 py-2 rounded font-semibold cursor-pointer ${
+                        updatingGameConfig 
+                          ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                          : 'bg-green-600 hover:bg-green-700 text-white'
+                      }`}
+                    >
+                      {updatingGameConfig ? 'Saving...' : 'Save changes'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

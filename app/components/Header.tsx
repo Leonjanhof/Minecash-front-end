@@ -65,7 +65,7 @@ export function Header() {
                     {balanceLoading ? (
                       <span className="text-yellow-400 font-semibold animate-pulse">Loading...</span>
                     ) : (
-                      <span className="text-yellow-400 font-semibold">GC Balance: {balance.toLocaleString()}</span>
+                      <span className="text-yellow-400 font-semibold">GC: {balance.toLocaleString()}</span>
                     )}
                   </div>
                 </div>

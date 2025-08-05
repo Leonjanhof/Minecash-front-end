@@ -194,18 +194,18 @@ export default function HiLo() {
           <GameLiveView />
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-6 mb-8">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 xl:items-start">
+        <div className="bg-gray-900 rounded-lg p-4 sm:p-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 xl:items-start">
             {/* Betting Controls */}
             <div className="h-full flex flex-col">
               <h3 className="text-white font-bold text-lg mb-4">Place your bet</h3>
               <div className="space-y-3">
                 <div>
                   <label className="text-white text-sm block mb-1">Bet amount:</label>
-                  <div className="flex items-center space-x-2 w-full">
+                  <div className="flex items-center space-x-1 sm:space-x-2 w-full">
                     <button 
                       onClick={() => updateBet(Math.max(1, bet - 1))}
-                      className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded transition-colors cursor-pointer flex-shrink-0"
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-2 sm:px-3 py-2 rounded transition-colors cursor-pointer flex-shrink-0 text-sm"
                     >
                       -1
                     </button>
@@ -213,14 +213,14 @@ export default function HiLo() {
                       type="number"
                       value={betInput}
                       onChange={(e) => handleBetInputChange(e.target.value)}
-                      className="bg-gray-800 border border-gray-600 px-4 py-2 rounded text-center flex-1 text-yellow-400 font-bold focus:outline-none focus:border-yellow-400"
+                      className="bg-gray-800 border border-gray-600 px-2 sm:px-4 py-2 rounded text-center flex-1 text-yellow-400 font-bold focus:outline-none focus:border-yellow-400 text-sm sm:text-base"
                       min="1"
                       placeholder="0"
                     />
-                    <span className="text-gray-400 flex-shrink-0">GC</span>
+                    <span className="text-gray-400 flex-shrink-0 text-sm sm:text-base">GC</span>
                     <button 
                       onClick={() => updateBet(bet + 1)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded transition-colors cursor-pointer flex-shrink-0"
+                      className="bg-gray-700 hover:bg-gray-600 text-white px-2 sm:px-3 py-2 rounded transition-colors cursor-pointer flex-shrink-0 text-sm"
                     >
                       +1
                     </button>
@@ -228,11 +228,11 @@ export default function HiLo() {
                   
                   {/* Quick Bet Buttons */}
                   <div className="grid grid-cols-5 gap-1 mt-2">
-                    <button onClick={() => updateBet(bet + 5)} className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs cursor-pointer">+5</button>
-                    <button onClick={() => updateBet(bet + 10)} className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs cursor-pointer">+10</button>
-                    <button onClick={() => updateBet(bet + 25)} className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs cursor-pointer">+25</button>
-                    <button onClick={() => updateBet(bet + 50)} className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs cursor-pointer">+50</button>
-                    <button onClick={() => updateBet(bet + 100)} className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs cursor-pointer">+100</button>
+                    <button onClick={() => updateBet(bet + 5)} className="bg-gray-700 hover:bg-gray-600 text-white px-1 sm:px-2 py-1 rounded text-xs cursor-pointer">+5</button>
+                    <button onClick={() => updateBet(bet + 10)} className="bg-gray-700 hover:bg-gray-600 text-white px-1 sm:px-2 py-1 rounded text-xs cursor-pointer">+10</button>
+                    <button onClick={() => updateBet(bet + 25)} className="bg-gray-700 hover:bg-gray-600 text-white px-1 sm:px-2 py-1 rounded text-xs cursor-pointer">+25</button>
+                    <button onClick={() => updateBet(bet + 50)} className="bg-gray-700 hover:bg-gray-600 text-white px-1 sm:px-2 py-1 rounded text-xs cursor-pointer">+50</button>
+                    <button onClick={() => updateBet(bet + 100)} className="bg-gray-700 hover:bg-gray-600 text-white px-1 sm:px-2 py-1 rounded text-xs cursor-pointer">+100</button>
                   </div>
                 </div>
 

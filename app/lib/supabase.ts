@@ -163,6 +163,57 @@ export const reviewHelpers = {
   }
 }
 
+// GC Limits helper functions
+export const gcLimitsHelpers = {
+  // Get current GC limits
+  async getGCLimits() {
+    const { data, error } = await supabase
+      .from('gc_limits')
+      .select('*')
+
+    if (error) {
+      console.error('Error fetching GC limits:', error)
+      return {
+        deposit: { min: 50, max: 500 },
+        withdraw: { min: 50, max: 500 }
+      }
+    }
+
+    const limits = {
+      deposit: { min: 50, max: 500 },
+      withdraw: { min: 50, max: 500 }
+    }
+
+    data?.forEach(limit => {
+      limits[limit.limit_type] = {
+        min: limit.min_amount,
+        max: limit.max_amount
+      }
+    })
+
+    return limits
+  },
+
+  // Subscribe to real-time GC limits updates
+  subscribeToGCLimits(callback: (limits: any) => void) {
+    return supabase
+      .channel('gc_limits')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'gc_limits'
+        },
+        async () => {
+          const limits = await gcLimitsHelpers.getGCLimits()
+          callback(limits)
+        }
+      )
+      .subscribe()
+  }
+}
+
 // Gamemode access helper functions
 export const gamemodeAccessHelpers = {
   // Check if a gamemode is disabled for users
