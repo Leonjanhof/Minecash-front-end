@@ -30,7 +30,8 @@ class WebSocketService {
   constructor() {
     // WebSocket server runs on port 8080, HTTP server on port 3000
     // Use environment variable for production, fallback to localhost for development
-    const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8080';
+    const wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 
+      (import.meta.env.PROD ? 'wss://minecash-backend.onrender.com' : 'ws://localhost:8080');
     this.url = wsUrl;
   }
 
