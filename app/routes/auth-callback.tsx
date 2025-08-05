@@ -102,11 +102,9 @@ export default function AuthCallback() {
           .eq('auth_user_id', user.id)
           .single()
 
-        let userId: number
-
         if (userError || !existingUser) {
           // User doesn't exist, create them
-          // The database trigger will automatically create the GC balance
+          // The database trigger should automatically create the GC balance
           const { data: newUser, error: createError } = await supabase
             .from('users')
             .insert({
@@ -124,16 +122,42 @@ export default function AuthCallback() {
             return
           }
 
-          userId = newUser.id
-          console.log('New user created with ID:', userId)
-          // GC balance will be created automatically by the database trigger
-        } else {
-          userId = existingUser.id
-          console.log('Existing user found with ID:', userId)
-        }
+          console.log('New user created with ID:', newUser.id)
+          
+          // Verify that GC balance was created by the trigger
+          // If not, create it manually as a fallback
+          setTimeout(async () => {
+            try {
+              const { data: balanceCheck, error: balanceError } = await supabase
+                .from('gc_balances')
+                .select('id')
+                .eq('user_id', newUser.id)
+                .single()
 
-        // No need to manually create GC balance - the database trigger handles it
-        // The trigger will automatically create a GC balance with 0 balance for new users
+              if (balanceError || !balanceCheck) {
+                console.log('Trigger may have failed, creating GC balance manually...')
+                const { error: manualBalanceError } = await supabase
+                  .from('gc_balances')
+                  .insert({
+                    user_id: newUser.id,
+                    balance: 0
+                  })
+
+                if (manualBalanceError) {
+                  console.error('Manual GC balance creation also failed:', manualBalanceError)
+                } else {
+                  console.log('GC balance created manually for user:', newUser.id)
+                }
+              } else {
+                console.log('GC balance confirmed to exist for user:', newUser.id)
+              }
+            } catch (error) {
+              console.error('Error checking/creating GC balance:', error)
+            }
+          }, 1000) // Check after 1 second to allow trigger to complete
+        } else {
+          console.log('Existing user found with ID:', existingUser.id)
+        }
       } catch (error) {
         console.error('Error ensuring user exists:', error)
       }
