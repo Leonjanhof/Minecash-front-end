@@ -297,8 +297,8 @@ export default function Crash() {
             case 'crash_cashout_confirmed':
               console.log('game action success:', message);
               if (message.action === 'cashout' || message.type === 'crash_cashout_confirmed') {
-                const multiplier = message.result?.multiplier || message.cashoutMultiplier;
-                const payout = message.result?.payout || message.payoutAmount;
+                const multiplier = message.result?.cashoutMultiplier || message.cashoutMultiplier || message.result?.multiplier;
+                const payout = message.result?.cashoutAmount || message.cashoutAmount || message.result?.payout || message.payoutAmount;
                 addNotification(`Cashed out at ${multiplier}x for ${payout} GC!`, 'success');
                 // Reset bet amount after successful cashout
                 setCurrentBetAmount(0);
