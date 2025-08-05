@@ -272,6 +272,14 @@ export default function Crash() {
             case 'joined_game':
               console.log('joined crash game');
               break;
+            case 'join_game_error':
+              console.error('Failed to join crash game:', message.error);
+              addNotification('Failed to join game room. Please refresh the page.', 'error');
+              break;
+            case 'not_in_game_room':
+              console.error('Not in game room error:', message);
+              // Don't show notification for this specific error to prevent spam
+              break;
             case 'bet_confirmed':
             case 'crash_bet_confirmed':
               console.log('bet confirmed:', message);
@@ -321,6 +329,12 @@ export default function Crash() {
               const errorMsg = message.message || '';
               if (errorMsg.toLowerCase().includes('pong') || errorMsg.toLowerCase().includes('ping')) {
                 console.log('Blocked pong-related error message:', errorMsg);
+                return;
+              }
+              
+              // Filter out "not in room" related error messages to prevent spam
+              if (errorMsg.toLowerCase().includes('not in room') || errorMsg.toLowerCase().includes('not_in_room')) {
+                console.log('Blocked not in room error message:', errorMsg);
                 return;
               }
               
