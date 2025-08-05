@@ -106,6 +106,7 @@ export default function AuthCallback() {
 
         if (userError || !existingUser) {
           // User doesn't exist, create them
+          // The database trigger will automatically create the GC balance
           const { data: newUser, error: createError } = await supabase
             .from('users')
             .insert({
@@ -125,32 +126,14 @@ export default function AuthCallback() {
 
           userId = newUser.id
           console.log('New user created with ID:', userId)
+          // GC balance will be created automatically by the database trigger
         } else {
           userId = existingUser.id
+          console.log('Existing user found with ID:', userId)
         }
 
-        // Now ensure user has a GC balance entry
-        const { data: existingBalance, error: balanceError } = await supabase
-          .from('gc_balances')
-          .select('id')
-          .eq('user_id', userId)
-          .single()
-
-        if (balanceError || !existingBalance) {
-          // User doesn't have GC balance, create it with default 0 GC
-          const { error: balanceCreateError } = await supabase
-            .from('gc_balances')
-            .insert({
-              user_id: userId,
-              balance: 0 // Default starting balance
-            })
-
-          if (balanceCreateError) {
-            console.error('Error creating GC balance:', balanceCreateError)
-          } else {
-            console.log('GC balance created for user:', userId)
-          }
-        }
+        // No need to manually create GC balance - the database trigger handles it
+        // The trigger will automatically create a GC balance with 0 balance for new users
       } catch (error) {
         console.error('Error ensuring user exists:', error)
       }
