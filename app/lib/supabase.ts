@@ -17,15 +17,43 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export const gcBalanceHelpers = {
   // Get user's current GC balance
   async getUserBalance(userId: number): Promise<number> {
-    const { data, error } = await supabase
-      .rpc('get_user_gc_balance', { p_user_id: userId })
-    
-    if (error) {
-      console.error('Error fetching user balance:', error)
+    try {
+      // First try to get existing balance
+      const { data, error } = await supabase
+        .from('gc_balances')
+        .select('balance')
+        .eq('user_id', userId)
+        .single()
+      
+      if (error) {
+        // If no balance exists, create one
+        if (error.code === 'PGRST116') { // No rows returned
+          const { data: balanceData, error: createError } = await supabase
+            .from('gc_balances')
+            .insert({
+              user_id: userId,
+              balance: 0
+            })
+            .select('balance')
+            .single()
+         
+          if (createError) {
+            console.error('Error creating user balance:', createError)
+            return 0
+          }
+          
+          return balanceData?.balance || 0
+        } else {
+          console.error('Error fetching user balance:', error)
+          return 0
+        }
+      }
+      
+      return data?.balance || 0
+    } catch (error) {
+      console.error('Error in getUserBalance:', error)
       return 0
     }
-    
-    return data || 0
   },
 
   // Update user's GC balance (for games, deposits, withdrawals)
@@ -335,20 +363,38 @@ export const userStatsHelpers = {
 export const crashRoundsHelpers = {
   // Get the last crash rounds
   async getLastRounds(limit = 20) {
+    // First, get the latest round number to calculate the range
+    const { data: latestRound, error: latestError } = await supabase
+      .from('crash_rounds')
+      .select('round_number')
+      .eq('phase', 'completed')
+      .order('round_number', { ascending: false })
+      .limit(1)
+      .single()
+    
+    if (latestError || !latestRound) {
+      console.error('Error fetching latest round:', latestError)
+      return []
+    }
+    
+    // Get the last N rounds in chronological order
+    const startRound = Math.max(1, latestRound.round_number - limit + 1)
+    
     const { data, error } = await supabase
       .from('crash_rounds')
       .select('round_number, crash_multiplier')
       .eq('phase', 'completed')
-      .order('round_number', { ascending: false })
-      .limit(limit)
+      .gte('round_number', startRound)
+      .lte('round_number', latestRound.round_number)
+      .order('round_number', { ascending: true })
     
     if (error) {
       console.error('Error fetching last rounds:', error)
       return []
     }
 
-    // Reverse to get chronological order (oldest to newest, left to right)
-    return data ? data.reverse().map(round => ({
+    // Return in chronological order (oldest to newest, left to right)
+    return data ? data.map(round => ({
       multiplier: Number(round.crash_multiplier),
       roundNumber: round.round_number
     })) : []

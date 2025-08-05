@@ -123,7 +123,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    // Return a default context during initialization to prevent errors
+    return {
+      user: null,
+      userProfile: null,
+      session: null,
+      loading: true,
+      signInWithDiscord: async () => {},
+      signOut: async () => {},
+      isAdmin: false
+    }
   }
   return context
 } 

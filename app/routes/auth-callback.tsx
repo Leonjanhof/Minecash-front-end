@@ -36,6 +36,9 @@ export default function AuthCallback() {
           if (data.session) {
             console.log('Authentication successful!')
             
+            // Ensure user exists in users table and has GC balance
+            await ensureUserExists(data.session.user)
+            
             // Sync Discord ID to users table if it's a Discord login
             if (data.session.user.app_metadata.provider === 'discord') {
               const discordId = data.session.user.user_metadata.sub || data.session.user.user_metadata.provider_id
@@ -77,6 +80,8 @@ export default function AuthCallback() {
         }
 
         if (sessionData.session) {
+          // Ensure user exists in users table and has GC balance
+          await ensureUserExists(sessionData.session.user)
           navigate('/')
         } else {
           navigate('/?error=no_session')
@@ -84,6 +89,70 @@ export default function AuthCallback() {
       } catch (error) {
         console.error('Auth callback error:', error)
         navigate('/?error=auth_failed')
+      }
+    }
+
+    // Function to ensure user exists in users table and has GC balance
+    const ensureUserExists = async (user: any) => {
+      try {
+        // First, check if user exists in users table
+        const { data: existingUser, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        let userId: number
+
+        if (userError || !existingUser) {
+          // User doesn't exist, create them
+          const { data: newUser, error: createError } = await supabase
+            .from('users')
+            .insert({
+              auth_user_id: user.id,
+              email: user.email,
+              username: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown',
+              avatar_url: user.user_metadata?.avatar_url,
+              role_id: 1 // Default user role
+            })
+            .select('id')
+            .single()
+
+          if (createError) {
+            console.error('Error creating user:', createError)
+            return
+          }
+
+          userId = newUser.id
+          console.log('New user created with ID:', userId)
+        } else {
+          userId = existingUser.id
+        }
+
+        // Now ensure user has a GC balance entry
+        const { data: existingBalance, error: balanceError } = await supabase
+          .from('gc_balances')
+          .select('id')
+          .eq('user_id', userId)
+          .single()
+
+        if (balanceError || !existingBalance) {
+          // User doesn't have GC balance, create it with default 0 GC
+          const { error: balanceCreateError } = await supabase
+            .from('gc_balances')
+            .insert({
+              user_id: userId,
+              balance: 0 // Default starting balance
+            })
+
+          if (balanceCreateError) {
+            console.error('Error creating GC balance:', balanceCreateError)
+          } else {
+            console.log('GC balance created for user:', userId)
+          }
+        }
+      } catch (error) {
+        console.error('Error ensuring user exists:', error)
       }
     }
 

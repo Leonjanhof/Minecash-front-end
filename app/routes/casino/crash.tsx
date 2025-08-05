@@ -25,7 +25,7 @@ function GameLiveView({ gameState, crashState, isConnected, lastRounds }: {
   isConnected: boolean; 
   lastRounds: Array<{multiplier: number, roundNumber: number}>;
 }) {
-  const multiplier = crashState?.currentMultiplier || 1.00;
+  const multiplier = crashState?.currentMultiplier ? parseFloat(crashState.currentMultiplier) : 1.0;
   const phase = crashState?.phase || 'waiting';
   const roundNumber = crashState?.currentRoundNumber || 1;
   
@@ -96,7 +96,7 @@ function GameLiveView({ gameState, crashState, isConnected, lastRounds }: {
                 ? 'text-lg sm:text-2xl md:text-3xl lg:text-4xl' 
                 : 'text-4xl sm:text-6xl md:text-8xl lg:text-9xl'
             }`}>
-              {parseFloat(multiplier).toFixed(2)}x
+              {multiplier.toFixed(2)}x
             </div>
           </div>
 
@@ -156,8 +156,8 @@ function GameLiveView({ gameState, crashState, isConnected, lastRounds }: {
               }
             }}
           >
-            {/* Show different number of rounds based on screen size - most recent on the right */}
-            {lastRounds.slice(-visibleRounds).map((round, index) => (
+            {/* Show the last 20 rounds - oldest to newest, left to right */}
+            {lastRounds.slice(-20).map((round, index) => (
               <div
                 key={round.roundNumber}
                 className={`flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-xs ${
@@ -165,7 +165,7 @@ function GameLiveView({ gameState, crashState, isConnected, lastRounds }: {
                 }`}
                 title={`Round ${round.roundNumber}: ${round.multiplier.toFixed(2)}x`}
               >
-                {round.multiplier.toFixed(1)}
+                {round.multiplier.toFixed(2)}
               </div>
             ))}
             {lastRounds.length === 0 && (
@@ -196,7 +196,7 @@ export default function Crash() {
   }>>([]);
   const [crashState, setCrashState] = useState({
     phase: 'waiting',
-    currentMultiplier: 1.00,
+    currentMultiplier: 1.0,
     currentRoundNumber: 1,
     activePlayersCount: 0,
     totalBetAmount: 0.00
@@ -236,16 +236,36 @@ export default function Crash() {
         onConnect: () => {
           console.log('webSocket connected to crash game');
           setIsConnected(true);
-          // Join the crash room with authentication token
+          
+          // Always join the crash room when connecting (let backend handle duplicates)
+          console.log('joining crash room');
           websocketService.joinGame('crash', session.access_token);
+          
+          // Request current game state to sync up (always request state on connect)
+          setTimeout(() => {
+            websocketService.send({
+              type: 'request_game_state',
+              gamemode: 'crash'
+            });
+          }, 500); // Small delay to ensure join is processed first
         },
         onDisconnect: () => {
           console.log('webSocket disconnected from crash game');
           setIsConnected(false);
+          // Don't reset isInRoom here - let the reconnection handle it
         },
         onMessage: (message) => {
-          // Debug: Log all incoming messages
-          console.log('websocket message received:', message);
+          // Completely ignore any ping/pong messages to prevent error notifications
+          if (message.type && (message.type.toLowerCase().includes('ping') || message.type.toLowerCase().includes('pong'))) {
+            console.log('Blocked ping/pong message:', message.type);
+            return;
+          }
+          
+          // Additional safety check - ignore any message that might be related to pong
+          if (message && typeof message === 'object' && message.type && message.type.toLowerCase().includes('pong')) {
+            console.log('Blocked pong-related message:', message.type);
+            return;
+          }
           
           // Handle non-chat game messages only
           switch (message.type) {
@@ -297,12 +317,22 @@ export default function Crash() {
               addNotification(message.message || 'Game action failed', 'warning');
               break;
             case 'error':
+              // Filter out pong-related error messages to prevent error notifications
+              const errorMsg = message.message || '';
+              if (errorMsg.toLowerCase().includes('pong') || errorMsg.toLowerCase().includes('ping')) {
+                console.log('Blocked pong-related error message:', errorMsg);
+                return;
+              }
+              
               console.log('websocket error:', message);
               addNotification(message.message || 'An error occurred', 'error');
               break;
             case 'crash_state_update':
               console.log('crash state update:', message.state);
-              setCrashState(message.state);
+              // Only update if we're not in crashed phase or if we have a valid crash point
+              if (message.state.phase !== 'crashed' || message.state.currentMultiplier > 1.0) {
+                setCrashState(message.state);
+              }
               
               // Handle bet state updates more robustly
               if (message.state.current_user_bet && message.state.current_user_bet.amount) {
@@ -314,10 +344,25 @@ export default function Crash() {
                 setCurrentBetAmount(0);
               }
               
-              // Update last rounds if provided
-              if (message.state.last_rounds) {
-                setLastRounds(message.state.last_rounds); // Data is already limited to 20
+              // Only update last rounds if we're in waiting phase (not during betting, playing, or crashed)
+              if (message.state.phase === 'waiting') {
+                if (message.state.last_rounds) {
+                  setLastRounds(message.state.last_rounds);
+                } else {
+                  // If no last_rounds provided, fetch fresh data to ensure we have the latest
+                  setTimeout(async () => {
+                    try {
+                      const freshRounds = await crashRoundsHelpers.getLastRounds(20);
+                      setLastRounds(freshRounds);
+                    } catch (error) {
+                      console.error('Error refreshing last rounds:', error);
+                    }
+                  }, 100);
+                }
               }
+              
+              // Log multiplier for debugging
+              console.log('crash multiplier:', message.state.currentMultiplier);
               
               // Additional logging for debugging
               console.log('current bet amount after update:', message.state.current_user_bet?.amount || 0);
@@ -346,10 +391,49 @@ export default function Crash() {
                 console.log('current bet amount after update:', message.state.current_user_bet?.amount || 0);
               }
               break;
+            case 'round_completed':
+              console.log('round completed:', message);
+              addNotification(`Round ${message.roundNumber} completed at ${message.crashPoint}x!`, 'success');
+              // Immediately refresh last rounds to show the completed round
+              setTimeout(async () => {
+                try {
+                  // Fetch fresh data from database and replace the entire array
+                  const freshRounds = await crashRoundsHelpers.getLastRounds(20);
+                  setLastRounds(freshRounds);
+                } catch (error) {
+                  console.error('Error refreshing last rounds:', error);
+                }
+              }, 1000);
+              break;
+            case 'crash_final_value':
+              console.log('crash final value received:', message);
+              // Immediately update crash state with final value to sync displays
+              // Use the exact crash point value from backend without additional formatting
+              const crashPoint = parseFloat(message.crashPoint);
+              setCrashState(prevState => ({
+                ...prevState,
+                currentMultiplier: crashPoint,
+                phase: 'crashed'
+              }));
+              break;
+            default:
+              // Silently ignore unknown message types to prevent error notifications
+              // Only log for debugging if it's not a ping/pong message
+              if (message.type && !message.type.toLowerCase().includes('pong') && !message.type.toLowerCase().includes('ping')) {
+                console.log('Unknown message type (ignored):', message.type);
+              }
+              break;
 
           }
         },
         onError: (error) => {
+          // Filter out pong-related errors to prevent error notifications
+          const errorMessage = error?.toString() || '';
+          if (errorMessage.toLowerCase().includes('pong') || errorMessage.toLowerCase().includes('ping')) {
+            console.log('Blocked pong-related error:', errorMessage);
+            return;
+          }
+          
           console.error('webSocket error in crash game:', error);
           setIsConnected(false);
         }
@@ -372,12 +456,11 @@ export default function Crash() {
     }
   }, [user, session?.access_token, loading]);
 
-  // Fetch last rounds when component mounts
+  // Fetch last rounds when component mounts and keep them updated
   useEffect(() => {
     const fetchLastRounds = async () => {
       try {
-        // Get more rounds than we'll display to ensure we have enough
-        const rounds = await crashRoundsHelpers.getLastRounds(50);
+        const rounds = await crashRoundsHelpers.getLastRounds(20);
         setLastRounds(rounds);
       } catch (error) {
         console.error('Error fetching last rounds:', error);
@@ -385,7 +468,21 @@ export default function Crash() {
     };
 
     fetchLastRounds();
-  }, []);
+    
+    // Set up 16ms game loop sync for 60 FPS
+    const gameLoopInterval = setInterval(() => {
+      if (isConnected) {
+        websocketService.send({
+          type: 'request_game_state',
+          gamemode: 'crash'
+        });
+      }
+    }, 16); // 16ms (60 FPS) to match game loop speed
+    
+    return () => {
+      clearInterval(gameLoopInterval);
+    };
+  }, [isConnected]);
 
   const handleBetInputChange = (value: string) => {
     setBetInput(value);
@@ -404,6 +501,22 @@ export default function Crash() {
     if (!user || !isConnected) {
       console.log('User not authenticated or WebSocket not connected');
       addNotification('Not connected to game server', 'error');
+      return;
+    }
+
+    // Check if we're properly joined to the crash room
+    if (websocketService.getCurrentGamemode() !== 'crash') {
+      console.log('Not in crash room, attempting to join');
+      websocketService.joinGame('crash', session?.access_token);
+      addNotification('Reconnecting to game room...', 'warning');
+      
+      // Retry after a short delay
+      setTimeout(() => {
+        if (websocketService.getCurrentGamemode() === 'crash') {
+          console.log('Successfully joined crash room, retrying bet');
+          websocketService.placeBet(bet);
+        }
+      }, 1000);
       return;
     }
 
@@ -431,10 +544,18 @@ export default function Crash() {
       return;
     }
 
-    // Check if we're in betting phase
+    // Check if we're in betting phase - double check with a small delay to ensure state sync
     if (crashState.phase !== 'betting') {
       addNotification(`Betting is not open. Current phase: ${crashState.phase}`, 'error');
       return;
+    }
+    
+    // Additional safety check - request current game state to ensure we have the latest phase
+    if (isConnected) {
+      websocketService.send({
+        type: 'request_game_state',
+        gamemode: 'crash'
+      });
     }
 
     try {
@@ -451,6 +572,22 @@ export default function Crash() {
 
   const handleGameAction = (action: string) => {
     if (!isConnected) return;
+    
+    // Check if we're properly joined to the crash room
+    if (websocketService.getCurrentGamemode() !== 'crash') {
+      console.log('Not in crash room, attempting to join');
+      websocketService.joinGame('crash', session?.access_token);
+      addNotification('Reconnecting to game room...', 'warning');
+      
+      // Retry after a short delay
+      setTimeout(() => {
+        if (websocketService.getCurrentGamemode() === 'crash') {
+          console.log('Successfully joined crash room, retrying action');
+          websocketService.sendGameAction(action);
+        }
+      }, 1000);
+      return;
+    }
     
     if (action === 'auto_cashout') {
       // Toggle auto-cashout state
@@ -601,12 +738,19 @@ export default function Crash() {
                    </div>
                  )}
                  
+                 {/* Betting Status Notification */}
+                 {crashState.phase !== 'betting' && (
+                   <div className="bg-red-600 text-white px-3 py-2 rounded text-sm font-semibold text-center">
+                     Betting is {crashState.phase === 'playing' ? 'closed - game in progress' : 'closed'}
+                   </div>
+                 )}
+                 
                  <GoldButton 
                    className="w-full" 
                    onClick={handlePlaceBet}
-                   disabled={!isConnected}
+                   disabled={!isConnected || crashState.phase !== 'betting'}
                  >
-                   Bet
+                   {crashState.phase === 'betting' ? 'Bet' : 'Betting closed morron'}
                  </GoldButton>
                 <button 
                   className={`w-full px-4 py-2 rounded font-semibold transition-colors cursor-pointer relative ${

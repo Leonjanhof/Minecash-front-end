@@ -26,6 +26,7 @@ class WebSocketService {
   private isConnecting = false;
   private connectionCount = 0; // Track how many components are using the connection
   private lastJoinedGamemode: string | null = null; // Track last joined gamemode to prevent duplicates
+  private keepAliveInterval: NodeJS.Timeout | null = null; // Keep-alive interval
 
   constructor() {
     // WebSocket server runs on port 8080, HTTP server on port 3000
@@ -73,12 +74,44 @@ class WebSocketService {
       console.log('webSocket connected');
       this.isConnecting = false;
       this.reconnectAttempts = 0;
+      this.startKeepAlive();
+      
+      // If we were previously in a gamemode, automatically rejoin
+      if (this.lastJoinedGamemode) {
+        console.log(`auto-rejoining ${this.lastJoinedGamemode} after reconnection`);
+        // Small delay to ensure connection is stable
+        setTimeout(() => {
+          this.send({
+            type: 'join_game',
+            gamemode: this.lastJoinedGamemode
+          });
+        }, 100);
+      }
+      
       this.callbacks.onConnect?.();
     };
 
     this.ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        
+        // Handle ping/pong for keep-alive - don't log or process these messages
+        if (message.type === 'ping') {
+          this.send({ type: 'pong', timestamp: Date.now() });
+          return;
+        }
+        
+        // Explicitly filter out pong messages to prevent them from reaching handlers
+        if (message.type === 'pong') {
+          return;
+        }
+        
+        // Additional safety check - don't process any message that looks like a pong
+        if (message.type && message.type.toLowerCase().includes('pong')) {
+          return;
+        }
+        
+        // Log non-ping/pong messages for debugging
         console.log('webSocket message received:', message);
         
         // Call the main message callback
@@ -106,9 +139,18 @@ class WebSocketService {
       if (this.connectionCount > 0) {
         this.attemptReconnect();
       }
+      // Note: Don't reset lastJoinedGamemode here - let it persist across reconnections
+      // This allows us to automatically rejoin the same room when reconnecting
     };
 
     this.ws.onerror = (error) => {
+      // Filter out pong-related errors to prevent error notifications
+      const errorMessage = error?.toString() || '';
+      if (errorMessage.toLowerCase().includes('pong') || errorMessage.toLowerCase().includes('ping')) {
+        console.log('Blocked pong-related WebSocket error:', errorMessage);
+        return;
+      }
+      
       console.error('webSocket error:', error);
       this.isConnecting = false;
       this.callbacks.onError?.(error);
@@ -140,11 +182,8 @@ class WebSocketService {
   }
 
   joinGame(gamemode: string, token?: string) {
-    // Prevent duplicate joins to the same gamemode
-    if (this.lastJoinedGamemode === gamemode) {
-      return;
-    }
-    
+    // Always attempt to join (let backend handle duplicates)
+    console.log(`joining ${gamemode} game room`);
     this.lastJoinedGamemode = gamemode;
     this.send({
       type: 'join_game',
@@ -204,6 +243,7 @@ class WebSocketService {
     // Only actually disconnect when no components are using the connection
     if (this.connectionCount === 0) {
       console.log('webSocket actually disconnecting');
+      this.stopKeepAlive();
       if (this.ws) {
         this.ws.close();
         this.ws = null;
@@ -235,6 +275,34 @@ class WebSocketService {
   // Reset gamemode tracking (useful when switching between games)
   resetGamemodeTracking() {
     this.lastJoinedGamemode = null;
+  }
+
+  // Get current gamemode (for checking if already in a room)
+  getCurrentGamemode(): string | null {
+    return this.lastJoinedGamemode;
+  }
+
+  // Start client-side keep-alive
+  private startKeepAlive() {
+    // Clear any existing interval
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+    }
+
+    // Send ping every 25 seconds to keep connection alive
+    this.keepAliveInterval = setInterval(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.send({ type: 'ping', timestamp: Date.now() });
+      }
+    }, 25000); // 25 seconds (slightly less than server's 30 seconds)
+  }
+
+  // Stop keep-alive
+  private stopKeepAlive() {
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
+    }
   }
 }
 

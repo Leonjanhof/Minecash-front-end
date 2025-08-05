@@ -35,6 +35,7 @@ interface UserStats {
 export default function Profile() {
   const { user, loading, signInWithDiscord, userProfile } = useAuth();
   const { balance, isLoading: balanceLoading } = useGCBalance();
+  
   const [activeTab, setActiveTab] = useState("overview");
   const [searchParams, setSearchParams] = useSearchParams();
   const [highlightDeposit, setHighlightDeposit] = useState(false);
@@ -265,6 +266,20 @@ export default function Profile() {
           <p className="text-xl">Loading Profile...</p>
         </div>
       </div>
+    );
+  }
+
+  // Show loading state while auth is initializing
+  if (loading) {
+    return (
+      <main className="pt-16 p-4 container mx-auto">
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading profile...</p>
+          </div>
+        </div>
+      </main>
     );
   }
 
