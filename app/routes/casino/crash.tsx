@@ -76,7 +76,7 @@ function GameLiveView({ gameState, crashState, isConnected, lastRounds }: {
       {/* 3D Rocket Scene - Background */}
       <div className="absolute inset-0 z-0">
         <CrashRocketScene 
-          multiplier={parseFloat(multiplier)} 
+          multiplier={parseFloat(multiplier.toString())} 
           phase={phase} 
           className="w-full h-full"
         />
@@ -278,15 +278,16 @@ export default function Crash() {
               break;
             case 'not_in_game_room':
               console.error('Not in game room error:', message);
-              // Don't show notification for this specific error to prevent spam
+              addNotification('Not connected to game room. Please refresh the page.', 'error');
               break;
+            case 'bet_success':
             case 'bet_confirmed':
             case 'crash_bet_confirmed':
               console.log('bet confirmed:', message);
               // Set current bet amount immediately from the bet confirmation
-              if (message.betAmount) {
-                console.log('setting current bet amount from bet confirmation:', message.betAmount);
-                setCurrentBetAmount(message.betAmount);
+              if (message.amount) {
+                console.log('setting current bet amount from bet confirmation:', message.amount);
+                setCurrentBetAmount(message.amount);
               }
               addNotification('Bet placed successfully!', 'success');
               console.log('bet confirmed - waiting for state update to set current bet amount');
@@ -305,8 +306,9 @@ export default function Crash() {
             case 'crash_cashout_confirmed':
               console.log('game action success:', message);
               if (message.action === 'cashout' || message.type === 'crash_cashout_confirmed') {
-                const multiplier = message.result?.cashoutMultiplier || message.cashoutMultiplier || message.result?.multiplier;
-                const payout = message.result?.cashoutAmount || message.cashoutAmount || message.result?.payout || message.payoutAmount;
+                // Handle both old and new backend response structures
+                const multiplier = message.result?.cashoutValue || message.result?.cashoutMultiplier || message.cashoutMultiplier || message.result?.multiplier;
+                const payout = message.result?.cashoutAmount || message.result?.payout || message.cashoutAmount || message.payoutAmount;
                 addNotification(`Cashed out at ${multiplier}x for ${payout} GC!`, 'success');
                 // Reset bet amount after successful cashout
                 setCurrentBetAmount(0);
@@ -316,7 +318,7 @@ export default function Crash() {
                   updateBalance(newBalance - balance, 'game_win', 'crash', message.result?.gameId || 'crash_round', `Cashout at ${multiplier}x`);
                 }
               } else if (message.action === 'auto_cashout') {
-                addNotification(`Auto cashout enabled at ${message.result?.targetMultiplier || message.targetMultiplier}x!`, 'success');
+                addNotification(`Auto cashout enabled at ${message.result?.targetValue || message.result?.targetMultiplier || message.targetMultiplier}x!`, 'success');
                 setAutoCashoutActive(true);
               }
               break;
@@ -332,36 +334,34 @@ export default function Crash() {
                 return;
               }
               
-              // Filter out "not in room" related error messages to prevent spam
-              if (errorMsg.toLowerCase().includes('not in room') || errorMsg.toLowerCase().includes('not_in_room')) {
-                console.log('Blocked not in room error message:', errorMsg);
-                return;
-              }
-              
               console.log('websocket error:', message);
               addNotification(message.message || 'An error occurred', 'error');
               break;
             case 'crash_state_update':
-              console.log('crash state update:', message.state);
+            case 'game_state_update':
+              console.log('game state update:', message);
+              // Handle both crash_state_update and game_state_update
+              const state = message.state || message;
+              
               // Only update if we're not in crashed phase or if we have a valid crash point
-              if (message.state.phase !== 'crashed' || message.state.currentMultiplier > 1.0) {
-                setCrashState(message.state);
+              if (state.phase !== 'crashed' || state.currentMultiplier > 1.0) {
+                setCrashState(state);
               }
               
               // Handle bet state updates more robustly
-              if (message.state.current_user_bet && message.state.current_user_bet.amount) {
-                console.log('setting current bet amount to:', message.state.current_user_bet.amount);
-                setCurrentBetAmount(message.state.current_user_bet.amount);
-              } else if (message.state.phase === 'crashed' || message.state.phase === 'waiting') {
+              if (state.current_user_bet && state.current_user_bet.amount) {
+                console.log('setting current bet amount to:', state.current_user_bet.amount);
+                setCurrentBetAmount(state.current_user_bet.amount);
+              } else if (state.phase === 'crashed' || state.phase === 'waiting') {
                 // Reset bet when game ends or new round starts
                 console.log('resetting bet amount - game ended or new round');
                 setCurrentBetAmount(0);
               }
               
               // Only update last rounds if we're in waiting phase (not during betting, playing, or crashed)
-              if (message.state.phase === 'waiting') {
-                if (message.state.last_rounds) {
-                  setLastRounds(message.state.last_rounds);
+              if (state.phase === 'waiting') {
+                if (state.last_rounds) {
+                  setLastRounds(state.last_rounds);
                 } else {
                   // If no last_rounds provided, fetch fresh data to ensure we have the latest
                   setTimeout(async () => {
@@ -376,34 +376,10 @@ export default function Crash() {
               }
               
               // Log multiplier for debugging
-              console.log('crash multiplier:', message.state.currentMultiplier);
+              console.log('crash multiplier:', state.currentMultiplier);
               
               // Additional logging for debugging
-              console.log('current bet amount after update:', message.state.current_user_bet?.amount || 0);
-              break;
-            case 'game_state_update':
-              console.log('game state update:', message.state);
-              if (message.gamemode === 'crash') {
-                setCrashState(message.state);
-                
-                // Handle bet state updates more robustly
-                if (message.state.current_user_bet && message.state.current_user_bet.amount) {
-                  console.log('setting current bet amount to:', message.state.current_user_bet.amount);
-                  setCurrentBetAmount(message.state.current_user_bet.amount);
-                } else if (message.state.phase === 'crashed' || message.state.phase === 'waiting') {
-                  // Reset bet when game ends or new round starts
-                  console.log('resetting bet amount - game ended or new round');
-                  setCurrentBetAmount(0);
-                }
-                
-                // Update last rounds if provided
-                if (message.state.last_rounds) {
-                  setLastRounds(message.state.last_rounds); // Data is already limited to 20
-                }
-                
-                // Additional logging for debugging
-                console.log('current bet amount after update:', message.state.current_user_bet?.amount || 0);
-              }
+              console.log('current bet amount after update:', state.current_user_bet?.amount || 0);
               break;
             case 'round_completed':
               console.log('round completed:', message);
@@ -432,7 +408,8 @@ export default function Crash() {
               break;
             case 'auto_cashout_triggered':
               console.log('auto cashout triggered:', message);
-              const autoMultiplier = message.cashoutMultiplier || message.multiplier;
+              // Handle both old and new backend property names
+              const autoMultiplier = message.cashoutValue || message.cashoutMultiplier || message.multiplier;
               const autoPayout = message.cashoutAmount || message.payout;
               addNotification(`Auto cashout at ${autoMultiplier}x for ${autoPayout} GC!`, 'success');
               // Reset bet amount after successful auto-cashout
@@ -560,7 +537,7 @@ export default function Crash() {
         return;
       }
       
-      if (userData?.banned) {
+      if (userData && 'banned' in userData && userData.banned) {
         addNotification('You are banned from placing bets', 'error');
         return;
       }
@@ -597,7 +574,10 @@ export default function Crash() {
   };
 
   const handleGameAction = (action: string) => {
-    if (!isConnected) return;
+    if (!isConnected) {
+      addNotification('Not connected to game server', 'error');
+      return;
+    }
     
     // Check if we're properly joined to the crash room
     if (websocketService.getCurrentGamemode() !== 'crash') {
@@ -616,18 +596,59 @@ export default function Crash() {
     }
     
     if (action === 'auto_cashout') {
+      // Validate auto-cashout multiplier
+      if (autoCashout < 1.0 || autoCashout > 1000.0) {
+        addNotification('Auto-cashout multiplier must be between 1.0x and 1000.0x', 'error');
+        return;
+      }
+      
+      // Check if user has an active bet
+      if (currentBetAmount <= 0) {
+        addNotification('You need an active bet to set auto-cashout', 'error');
+        return;
+      }
+      
+      // Check if we're in the right phase
+      if (crashState.phase !== 'betting' && crashState.phase !== 'playing') {
+        addNotification('Auto-cashout can only be set during betting or playing phase', 'error');
+        return;
+      }
+      
       // Toggle auto-cashout state
       const newAutoCashoutActive = !autoCashoutActive;
       setAutoCashoutActive(newAutoCashoutActive);
       
       if (newAutoCashoutActive) {
         // Send auto-cashout action with target multiplier
-        websocketService.sendGameAction('auto_cashout', { targetMultiplier: autoCashout });
+        websocketService.sendGameAction('auto_cashout', { targetMultiplier: autoCashout.toString() });
         console.log(`Auto cashout enabled at ${autoCashout}x`);
+        addNotification(`Auto cashout enabled at ${autoCashout}x`, 'success');
       } else {
-        // Disable auto-cashout (could be handled by sending a disable action)
+        // Disable auto-cashout by setting it to 0 (will be ignored by backend)
+        websocketService.sendGameAction('auto_cashout', { targetMultiplier: '0' });
         console.log('Auto cashout disabled');
+        addNotification('Auto cashout disabled', 'success');
       }
+    } else if (action === 'cashout') {
+      // Validate manual cashout
+      if (currentBetAmount <= 0) {
+        addNotification('No active bet to cash out', 'error');
+        return;
+      }
+      
+      if (crashState.phase !== 'playing') {
+        addNotification('Cashout is only available during the playing phase', 'error');
+        return;
+      }
+      
+      if (autoCashoutActive) {
+        addNotification('Please disable auto-cashout before manual cashout', 'error');
+        return;
+      }
+      
+      // Send cashout action
+      websocketService.sendGameAction(action);
+      console.log(`Manual cashout requested at ${parseFloat(String(crashState.currentMultiplier)).toFixed(2)}x`);
     } else {
       // Send other game actions
       websocketService.sendGameAction(action);

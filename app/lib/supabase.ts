@@ -305,16 +305,17 @@ export const userStatsHelpers = {
   // Get user statistics for crash game
   async getCrashStats(userId: number) {
     const { data, error } = await supabase
-      .from('crash_bets')
+      .from('game_bets')
       .select(`
         id,
         bet_amount,
         payout_amount,
         status,
-        cashout_multiplier,
+        cashout_value,
         created_at
       `)
       .eq('user_id', userId)
+      .eq('game_type', 'crash')
     
     if (error) {
       console.error('Error fetching crash stats:', error)
@@ -365,9 +366,10 @@ export const crashRoundsHelpers = {
   async getLastRounds(limit = 20) {
     // First, get the latest round number to calculate the range
     const { data: latestRound, error: latestError } = await supabase
-      .from('crash_rounds')
+      .from('game_rounds')
       .select('round_number')
-      .eq('phase', 'completed')
+      .eq('game_type', 'crash')
+      .eq('status', 'completed')
       .order('round_number', { ascending: false })
       .limit(1)
       .single()
@@ -381,9 +383,10 @@ export const crashRoundsHelpers = {
     const startRound = Math.max(1, latestRound.round_number - limit + 1)
     
     const { data, error } = await supabase
-      .from('crash_rounds')
-      .select('round_number, crash_multiplier')
-      .eq('phase', 'completed')
+      .from('game_rounds')
+      .select('round_number, game_data')
+      .eq('game_type', 'crash')
+      .eq('status', 'completed')
       .gte('round_number', startRound)
       .lte('round_number', latestRound.round_number)
       .order('round_number', { ascending: true })
@@ -395,7 +398,7 @@ export const crashRoundsHelpers = {
 
     // Return in chronological order (oldest to newest, left to right)
     return data ? data.map(round => ({
-      multiplier: Number(round.crash_multiplier),
+      multiplier: Number(round.game_data?.crash_multiplier || 1.00),
       roundNumber: round.round_number
     })) : []
   }
